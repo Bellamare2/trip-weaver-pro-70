@@ -14,7 +14,178 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      events: {
+        Row: {
+          address: string | null
+          created_at: string
+          end_time: string | null
+          event_type: string
+          id: string
+          itinerary_id: string
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          notes: string | null
+          owner_id: string
+          phone: string | null
+          start_time: string
+          title: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          end_time?: string | null
+          event_type?: string
+          id?: string
+          itinerary_id: string
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          notes?: string | null
+          owner_id: string
+          phone?: string | null
+          start_time: string
+          title: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          end_time?: string | null
+          event_type?: string
+          id?: string
+          itinerary_id?: string
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          notes?: string | null
+          owner_id?: string
+          phone?: string | null
+          start_time?: string
+          title?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guests: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          owner_id: string
+          phone: string | null
+          preferences: string | null
+          room_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          phone?: string | null
+          preferences?: string | null
+          room_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          phone?: string | null
+          preferences?: string | null
+          room_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      itineraries: {
+        Row: {
+          created_at: string
+          end_date: string
+          guest_id: string
+          id: string
+          notes: string | null
+          owner_id: string
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          guest_id: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          guest_id?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itineraries_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
