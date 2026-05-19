@@ -48,7 +48,7 @@ function ItinerariesPage() {
     },
   });
 
-  const { data: guests } = useQuery({
+  const { data: guests, refetch: refetchGuests } = useQuery({
     queryKey: ["guests-lite"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -75,13 +75,17 @@ function ItinerariesPage() {
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> New itinerary</Button>
             </DialogTrigger>
-            <NewItineraryDialog
-              guests={guests ?? []}
-              onCreated={() => { setOpen(false); refetch(); }}
-            />
+            {open && (
+              <NewItineraryDialog
+                guests={guests ?? []}
+                onGuestCreated={refetchGuests}
+                onCreated={() => { setOpen(false); refetch(); }}
+              />
+            )}
           </Dialog>
         </div>
       </div>
+
 
       <div className="mt-8 grid gap-4">
         {itineraries?.length === 0 && (
