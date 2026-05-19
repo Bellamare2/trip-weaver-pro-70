@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppGuestsIndexRouteImport } from './routes/_authenticated/app.guests.index'
-import { Route as AuthenticatedAppItinerariesItineraryIdRouteImport } from './routes/_authenticated/app.itineraries.$itineraryId'
 import { Route as AuthenticatedAppGuestsGuestIdRouteImport } from './routes/_authenticated/app.guests.$guestId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -42,12 +41,6 @@ const AuthenticatedAppGuestsIndexRoute =
     path: '/app/guests/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAppItinerariesItineraryIdRoute =
-  AuthenticatedAppItinerariesItineraryIdRouteImport.update({
-    id: '/app/itineraries/$itineraryId',
-    path: '/app/itineraries/$itineraryId',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAppGuestsGuestIdRoute =
   AuthenticatedAppGuestsGuestIdRouteImport.update({
     id: '/app/guests/$guestId',
@@ -60,7 +53,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
-  '/app/itineraries/$itineraryId': typeof AuthenticatedAppItinerariesItineraryIdRoute
   '/app/guests/': typeof AuthenticatedAppGuestsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -68,7 +60,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
-  '/app/itineraries/$itineraryId': typeof AuthenticatedAppItinerariesItineraryIdRoute
   '/app/guests': typeof AuthenticatedAppGuestsIndexRoute
 }
 export interface FileRoutesById {
@@ -78,26 +69,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
-  '/_authenticated/app/itineraries/$itineraryId': typeof AuthenticatedAppItinerariesItineraryIdRoute
   '/_authenticated/app/guests/': typeof AuthenticatedAppGuestsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/login'
-    | '/app/'
-    | '/app/guests/$guestId'
-    | '/app/itineraries/$itineraryId'
-    | '/app/guests/'
+  fullPaths: '/' | '/login' | '/app/' | '/app/guests/$guestId' | '/app/guests/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/login'
-    | '/app'
-    | '/app/guests/$guestId'
-    | '/app/itineraries/$itineraryId'
-    | '/app/guests'
+  to: '/' | '/login' | '/app' | '/app/guests/$guestId' | '/app/guests'
   id:
     | '__root__'
     | '/'
@@ -105,7 +83,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/app/'
     | '/_authenticated/app/guests/$guestId'
-    | '/_authenticated/app/itineraries/$itineraryId'
     | '/_authenticated/app/guests/'
   fileRoutesById: FileRoutesById
 }
@@ -152,13 +129,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppGuestsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/itineraries/$itineraryId': {
-      id: '/_authenticated/app/itineraries/$itineraryId'
-      path: '/app/itineraries/$itineraryId'
-      fullPath: '/app/itineraries/$itineraryId'
-      preLoaderRoute: typeof AuthenticatedAppItinerariesItineraryIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/app/guests/$guestId': {
       id: '/_authenticated/app/guests/$guestId'
       path: '/app/guests/$guestId'
@@ -172,15 +142,12 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppGuestsGuestIdRoute: typeof AuthenticatedAppGuestsGuestIdRoute
-  AuthenticatedAppItinerariesItineraryIdRoute: typeof AuthenticatedAppItinerariesItineraryIdRoute
   AuthenticatedAppGuestsIndexRoute: typeof AuthenticatedAppGuestsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppGuestsGuestIdRoute: AuthenticatedAppGuestsGuestIdRoute,
-  AuthenticatedAppItinerariesItineraryIdRoute:
-    AuthenticatedAppItinerariesItineraryIdRoute,
   AuthenticatedAppGuestsIndexRoute: AuthenticatedAppGuestsIndexRoute,
 }
 
@@ -196,3 +163,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
