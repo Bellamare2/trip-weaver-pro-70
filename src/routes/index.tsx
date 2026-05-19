@@ -1,15 +1,10 @@
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { useAuth } from "@/hooks/use-auth";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/app" />;
-
   return (
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -18,10 +13,10 @@ function Landing() {
           <span className="font-display text-xl font-semibold text-primary">Concierge</span>
         </div>
         <Link
-          to="/login"
+          to="/app"
           className="rounded-md border border-primary/20 px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
         >
-          Sign in
+          Open studio
         </Link>
       </header>
 
@@ -41,7 +36,7 @@ function Landing() {
           </p>
           <div className="mt-10 flex gap-3">
             <Link
-              to="/login"
+              to="/app"
               className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-90 transition-opacity"
             >
               Open the studio
@@ -52,8 +47,8 @@ function Landing() {
         <div className="mt-24 grid gap-8 md:grid-cols-3">
           {[
             { t: "Guest profiles", d: "Preferences, past itineraries, room numbers — one source of truth." },
-            { t: "Calendar view", d: "Drag‑smooth event scheduling across every day of the stay." },
-            { t: "Print‑ready", d: "Branded PDFs and print layouts in one click." },
+            { t: "Calendar view", d: "Drag-smooth event scheduling across every day of the stay." },
+            { t: "Print-ready", d: "Branded PDFs and print layouts in one click." },
           ].map((f) => (
             <div key={f.t} className="border-t border-gold/40 pt-6">
               <h3 className="font-display text-2xl text-primary">{f.t}</h3>
