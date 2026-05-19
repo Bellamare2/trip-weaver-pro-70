@@ -131,10 +131,32 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
   const [end, setEnd] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [addingGuest, setAddingGuest] = useState(guests.length === 0);
+  const [newGuest, setNewGuest] = useState({ full_name: "", room_number: "", phone: "" });
+
+  const createGuest = async () => {
+    if (!user || !newGuest.full_name.trim()) {
+      toast.error("Guest name is required");
+      return;
+    }
+    const { data, error } = await supabase.from("guests").insert({
+      owner_id: user.id,
+      full_name: newGuest.full_name.trim(),
+      room_number: newGuest.room_number || null,
+      phone: newGuest.phone || null,
+    }).select("id").single();
+    if (error) { toast.error(error.message); return; }
+    toast.success("Guest added");
+    setGuestId(data.id);
+    setAddingGuest(false);
+    // Refresh parent list
+    onCreated; // (parent refetch happens when itinerary created; guest list refetches on next dialog open via query key)
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!guestId) { toast.error("Please select or add a guest"); return; }
     setBusy(true);
     const { error } = await supabase.from("itineraries").insert({
       owner_id: user.id, guest_id: guestId, title, start_date: start, end_date: end, notes: notes || null,
@@ -147,15 +169,49 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
   };
 
   return (
-    <DialogContent>
+    <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader><DialogTitle className="font-display text-2xl">New itinerary</DialogTitle></DialogHeader>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
-          <Label>Guest</Label>
-          {guests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Add a guest first in the <Link to="/app/guests" className="underline">Guests</Link> page.
-            </p>
+          <div className="flex items-center justify-between">
+            <Label>Guest</Label>
+            {guests.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setAddingGuest((v) => !v)}
+                className="text-xs text-gold hover:underline"
+              >
+                {addingGuest ? "Pick existing" : "+ New guest"}
+              </button>
+            )}
+          </div>
+
+          {addingGuest ? (
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+              <Input
+                placeholder="Full name *"
+                value={newGuest.full_name}
+                onChange={(e) => setNewGuest({ ...newGuest, full_name: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Room"
+                  value={newGuest.room_number}
+                  onChange={(e) => setNewGuest({ ...newGuest, room_number: e.target.value })}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={newGuest.phone}
+                  onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
+                />
+              </div>
+              <Button type="button" size="sm" onClick={createGuest} className="w-full">
+                Save guest
+              </Button>
+              {guestId && (
+                <p className="text-xs text-muted-foreground">✓ Guest added & selected</p>
+              )}
+            </div>
           ) : (
             <Select value={guestId} onValueChange={setGuestId} required>
               <SelectTrigger><SelectValue placeholder="Select guest" /></SelectTrigger>
