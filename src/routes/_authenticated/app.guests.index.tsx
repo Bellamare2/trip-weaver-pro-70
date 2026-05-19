@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/_authenticated/guests")({
+export const Route = createFileRoute("/_authenticated/app/guests/")({
   component: GuestsPage,
 });
 

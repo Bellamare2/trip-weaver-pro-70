@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { UserPlus } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/app")({
+export const Route = createFileRoute("/_authenticated/app/")({
   component: ItinerariesPage,
 });
 

@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ArrowLeft, Mail, Phone, BedDouble } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/guests/$guestId")({
+export const Route = createFileRoute("/_authenticated/app/guests/$guestId")({
   component: GuestDetail,
 });
 
