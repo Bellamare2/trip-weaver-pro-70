@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, ChevronRight, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,10 +26,9 @@ interface Guest {
 }
 
 function GuestsPage() {
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const { data: guests, refetch } = useQuery({
-    queryKey: ["guests", user?.id],
+    queryKey: ["guests"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("guests").select("*").order("full_name");
@@ -83,7 +81,6 @@ function GuestsPage() {
 }
 
 function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
-  const { user } = useAuth();
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", room_number: "", preferences: "", notes: "",
   });
@@ -93,10 +90,8 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setBusy(true);
     const { error } = await supabase.from("guests").insert({
-      owner_id: user.id,
       full_name: form.full_name,
       email: form.email || null,
       phone: form.phone || null,

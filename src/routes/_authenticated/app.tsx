@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Plus, Calendar, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,11 +34,10 @@ interface Itinerary {
 interface GuestLite { id: string; full_name: string; room_number: string | null }
 
 function ItinerariesPage() {
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   const { data: itineraries, refetch } = useQuery({
-    queryKey: ["itineraries", user?.id],
+    queryKey: ["itineraries"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("itineraries")
@@ -51,7 +49,7 @@ function ItinerariesPage() {
   });
 
   const { data: guests } = useQuery({
-    queryKey: ["guests-lite", user?.id],
+    queryKey: ["guests-lite"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("guests")
@@ -124,7 +122,6 @@ function ItinerariesPage() {
 }
 
 function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCreated: () => void }) {
-  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [guestId, setGuestId] = useState("");
   const [start, setStart] = useState("");
@@ -135,12 +132,11 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
   const [newGuest, setNewGuest] = useState({ full_name: "", room_number: "", phone: "" });
 
   const createGuest = async () => {
-    if (!user || !newGuest.full_name.trim()) {
+    if (!newGuest.full_name.trim()) {
       toast.error("Guest name is required");
       return;
     }
     const { data, error } = await supabase.from("guests").insert({
-      owner_id: user.id,
       full_name: newGuest.full_name.trim(),
       room_number: newGuest.room_number || null,
       phone: newGuest.phone || null,
@@ -149,17 +145,14 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
     toast.success("Guest added");
     setGuestId(data.id);
     setAddingGuest(false);
-    // Refresh parent list
-    onCreated; // (parent refetch happens when itinerary created; guest list refetches on next dialog open via query key)
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     if (!guestId) { toast.error("Please select or add a guest"); return; }
     setBusy(true);
     const { error } = await supabase.from("itineraries").insert({
-      owner_id: user.id, guest_id: guestId, title, start_date: start, end_date: end, notes: notes || null,
+      guest_id: guestId, title, start_date: start, end_date: end, notes: notes || null,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }

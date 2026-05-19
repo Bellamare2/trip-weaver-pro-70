@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -244,7 +243,6 @@ function CalendarView({ days, events }: { days: Date[]; events: EventRow[] }) {
 }
 
 function EventDialog({ itineraryId, defaultDate, onSaved }: { itineraryId: string; defaultDate: string; onSaved: () => void }) {
-  const { user } = useAuth();
   const search = useServerFn(searchPlaces);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<string>("dining");
@@ -281,12 +279,11 @@ function EventDialog({ itineraryId, defaultDate, onSaved }: { itineraryId: strin
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setBusy(true);
     const start = new Date(`${date}T${startTime}`).toISOString();
     const end = endTime ? new Date(`${date}T${endTime}`).toISOString() : null;
     const { error } = await supabase.from("events").insert({
-      owner_id: user.id, itinerary_id: itineraryId, title, event_type: type,
+      itinerary_id: itineraryId, title, event_type: type,
       start_time: start, end_time: end,
       location_name: locationName || null, address: address || null,
       phone: phone || null, website: website || null, notes: notes || null,
