@@ -1,11 +1,9 @@
-import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -13,42 +11,22 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (loading) return null;
   if (user) return <Navigate to="/app" />;
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const signInWithGoogle = async () => {
     setBusy(true);
-    try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/app`,
-            data: { display_name: name },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created. Check your email to confirm.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/app" });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
-      toast.error(msg);
-    } finally {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast.error(result.error.message ?? "Sign-in failed");
       setBusy(false);
+      return;
     }
+    // On redirect, browser navigates away; otherwise session is set and root will redirect.
   };
 
   return (
@@ -70,48 +48,31 @@ function LoginPage() {
       </div>
 
       <div className="flex flex-1 items-center justify-center p-8">
-        <form onSubmit={submit} className="w-full max-w-sm space-y-5">
+        <div className="w-full max-w-sm space-y-6">
           <div>
-            <h1 className="font-display text-3xl text-primary">
-              {mode === "signin" ? "Welcome back" : "Create your studio"}
-            </h1>
+            <h1 className="font-display text-3xl text-primary">Welcome</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {mode === "signin"
-                ? "Sign in to your concierge desk."
-                : "Set up your private workspace."}
+              Sign in to your concierge desk.
             </p>
           </div>
 
-          {mode === "signup" && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Your name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-
-          <Button type="submit" disabled={busy} className="w-full">
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+          <Button
+            type="button"
+            onClick={signInWithGoogle}
+            disabled={busy}
+            className="w-full"
+            size="lg"
+          >
+            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden>
+              <path fill="currentColor" d="M21.35 11.1h-9.17v2.96h5.27c-.23 1.5-1.7 4.4-5.27 4.4-3.17 0-5.76-2.62-5.76-5.86s2.59-5.86 5.76-5.86c1.81 0 3.02.77 3.71 1.43l2.53-2.44C16.84 4.27 14.7 3.4 12.18 3.4 6.96 3.4 2.75 7.6 2.75 12.6s4.21 9.2 9.43 9.2c5.45 0 9.05-3.83 9.05-9.22 0-.62-.07-1.09-.18-1.48z" />
+            </svg>
+            {busy ? "Redirecting…" : "Continue with Google"}
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {mode === "signin" ? "Create account" : "Sign in"}
-            </button>
+          <p className="text-center text-xs text-muted-foreground">
+            By continuing you agree to our terms of service.
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );
