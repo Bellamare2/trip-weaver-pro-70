@@ -63,21 +63,26 @@ function ItinerariesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <div className="flex items-end justify-between">
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-gold">Studio</p>
-          <h1 className="mt-1 font-display text-4xl text-primary">Itineraries</h1>
+          <h1 className="mt-1 font-display text-3xl text-primary md:text-4xl">Itineraries</h1>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> New itinerary</Button>
-          </DialogTrigger>
-          <NewItineraryDialog
-            guests={guests ?? []}
-            onCreated={() => { setOpen(false); refetch(); }}
-          />
-        </Dialog>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/app/guests"><UserPlus className="mr-2 h-4 w-4" /> Guests</Link>
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" /> New itinerary</Button>
+            </DialogTrigger>
+            <NewItineraryDialog
+              guests={guests ?? []}
+              onCreated={() => { setOpen(false); refetch(); }}
+            />
+          </Dialog>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-4">
