@@ -6,12 +6,12 @@ export const Route = createFileRoute("/_authenticated")({
   component: AppLayout,
 });
 
-const nav = [
+const nav: { to: "/app" | "/app/guests" | "/app/calendar" | "/app/settings"; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/guests", label: "Guests", icon: Users },
   { to: "/app/calendar", label: "Calendar", icon: Calendar },
   { to: "/app/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 function AppLayout() {
   const { pathname } = useLocation();
