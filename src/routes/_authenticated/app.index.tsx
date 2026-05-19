@@ -48,7 +48,7 @@ function ItinerariesPage() {
     },
   });
 
-  const { data: guests } = useQuery({
+  const { data: guests, refetch: refetchGuests } = useQuery({
     queryKey: ["guests-lite"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -75,13 +75,17 @@ function ItinerariesPage() {
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> New itinerary</Button>
             </DialogTrigger>
-            <NewItineraryDialog
-              guests={guests ?? []}
-              onCreated={() => { setOpen(false); refetch(); }}
-            />
+            {open && (
+              <NewItineraryDialog
+                guests={guests ?? []}
+                onGuestCreated={refetchGuests}
+                onCreated={() => { setOpen(false); refetch(); }}
+              />
+            )}
           </Dialog>
         </div>
       </div>
+
 
       <div className="mt-8 grid gap-4">
         {itineraries?.length === 0 && (
@@ -121,7 +125,7 @@ function ItinerariesPage() {
   );
 }
 
-function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCreated: () => void }) {
+function NewItineraryDialog({ guests, onCreated, onGuestCreated }: { guests: GuestLite[]; onCreated: () => void; onGuestCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [guestId, setGuestId] = useState("");
   const [start, setStart] = useState("");
@@ -144,8 +148,11 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
     if (error) { toast.error(error.message); return; }
     toast.success("Guest added");
     setGuestId(data.id);
+    setNewGuest({ full_name: "", room_number: "", phone: "" });
     setAddingGuest(false);
+    onGuestCreated();
   };
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
