@@ -14,156 +14,148 @@ export type Database = {
   }
   public: {
     Tables: {
-      events: {
+      activities: {
         Row: {
-          address: string | null
+          category: string
+          confirmation_number: string | null
           created_at: string
-          end_time: string | null
-          event_type: string
-          id: string
-          itinerary_id: string
-          latitude: number | null
-          location_name: string | null
-          longitude: number | null
-          notes: string | null
-          owner_id: string | null
-          phone: string | null
-          start_time: string
-          title: string
-          updated_at: string
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          end_time?: string | null
-          event_type?: string
-          id?: string
-          itinerary_id: string
-          latitude?: number | null
-          location_name?: string | null
-          longitude?: number | null
-          notes?: string | null
-          owner_id?: string | null
-          phone?: string | null
-          start_time: string
-          title: string
-          updated_at?: string
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          end_time?: string | null
-          event_type?: string
-          id?: string
-          itinerary_id?: string
-          latitude?: number | null
-          location_name?: string | null
-          longitude?: number | null
-          notes?: string | null
-          owner_id?: string | null
-          phone?: string | null
-          start_time?: string
-          title?: string
-          updated_at?: string
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "events_itinerary_id_fkey"
-            columns: ["itinerary_id"]
-            isOneToOne: false
-            referencedRelation: "itineraries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guests: {
-        Row: {
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          notes: string | null
-          owner_id: string | null
-          phone: string | null
-          preferences: string | null
-          room_number: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          notes?: string | null
-          owner_id?: string | null
-          phone?: string | null
-          preferences?: string | null
-          room_number?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          notes?: string | null
-          owner_id?: string | null
-          phone?: string | null
-          preferences?: string | null
-          room_number?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      itineraries: {
-        Row: {
-          created_at: string
-          end_date: string
+          date: string
+          duration_minutes: number | null
           guest_id: string
           id: string
+          location: string | null
+          name: string
           notes: string | null
-          owner_id: string | null
-          start_date: string
+          price_usd: number | null
+          start_time: string | null
           status: string
-          title: string
           updated_at: string
+          vendor: string | null
         }
         Insert: {
+          category?: string
+          confirmation_number?: string | null
           created_at?: string
-          end_date: string
+          date: string
+          duration_minutes?: number | null
           guest_id: string
           id?: string
+          location?: string | null
+          name: string
           notes?: string | null
-          owner_id?: string | null
-          start_date: string
+          price_usd?: number | null
+          start_time?: string | null
           status?: string
-          title: string
           updated_at?: string
+          vendor?: string | null
         }
         Update: {
+          category?: string
+          confirmation_number?: string | null
           created_at?: string
-          end_date?: string
+          date?: string
+          duration_minutes?: number | null
           guest_id?: string
           id?: string
+          location?: string | null
+          name?: string
           notes?: string | null
-          owner_id?: string | null
-          start_date?: string
+          price_usd?: number | null
+          start_time?: string | null
           status?: string
-          title?: string
           updated_at?: string
+          vendor?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "itineraries_guest_id_fkey"
+            foreignKeyName: "activities_guest_id_fkey"
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["id"]
           },
         ]
+      }
+      guests: {
+        Row: {
+          allergies: string | null
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          dietary: string | null
+          email: string | null
+          favorite_activities: string | null
+          full_name: string
+          id: string
+          language: string | null
+          nationality: string | null
+          notes: string | null
+          owner_id: string | null
+          party_size: number | null
+          phone: string | null
+          preferences: string | null
+          property: string | null
+          room_number: string | null
+          room_prefs: string | null
+          special_notes: string | null
+          tags: string[]
+          updated_at: string
+          vip_notes: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          allergies?: string | null
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          dietary?: string | null
+          email?: string | null
+          favorite_activities?: string | null
+          full_name: string
+          id?: string
+          language?: string | null
+          nationality?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          party_size?: number | null
+          phone?: string | null
+          preferences?: string | null
+          property?: string | null
+          room_number?: string | null
+          room_prefs?: string | null
+          special_notes?: string | null
+          tags?: string[]
+          updated_at?: string
+          vip_notes?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          allergies?: string | null
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          dietary?: string | null
+          email?: string | null
+          favorite_activities?: string | null
+          full_name?: string
+          id?: string
+          language?: string | null
+          nationality?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          party_size?: number | null
+          phone?: string | null
+          preferences?: string | null
+          property?: string | null
+          room_number?: string | null
+          room_prefs?: string | null
+          special_notes?: string | null
+          tags?: string[]
+          updated_at?: string
+          vip_notes?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -183,6 +175,24 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }

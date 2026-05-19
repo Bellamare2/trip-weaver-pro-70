@@ -10,7 +10,7 @@ function Landing() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-sm bg-primary" />
-          <span className="font-display text-xl font-semibold text-primary">Concierge</span>
+          <span className="font-display text-xl font-semibold text-primary">Bellamare</span>
         </div>
         <Link
           to="/app"
@@ -22,33 +22,33 @@ function Landing() {
 
       <main className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-3xl">
-          <span className="inline-block text-xs uppercase tracking-[0.2em] text-gold">
-            Itinerary Studio
+          <span className="inline-block text-xs uppercase tracking-[0.25em] text-gold">
+            Los Cabos · Concierge
           </span>
           <h1 className="mt-6 font-display text-6xl leading-[1.05] text-primary md:text-7xl">
-            Craft journeys
+            Quiet luxury,
             <br />
-            <span className="italic text-gold">worth remembering.</span>
+            <span className="italic text-gold">attentively orchestrated.</span>
           </h1>
           <p className="mt-8 max-w-xl text-lg text-muted-foreground">
-            Build, edit and print bespoke itineraries for every guest. Keep profiles,
-            preferences and past stays at your fingertips — like Alice, but yours.
+            Bellamare Concierge is the internal command desk for our property managers —
+            guest preferences, itineraries, vendors and confirmations, in one calm place.
           </p>
           <div className="mt-10 flex gap-3">
             <Link
               to="/app"
               className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-90 transition-opacity"
             >
-              Open the studio
+              Enter the desk
             </Link>
           </div>
         </div>
 
         <div className="mt-24 grid gap-8 md:grid-cols-3">
           {[
-            { t: "Guest profiles", d: "Preferences, past itineraries, room numbers — one source of truth." },
-            { t: "Calendar view", d: "Drag-smooth event scheduling across every day of the stay." },
-            { t: "Print-ready", d: "Branded PDFs and print layouts in one click." },
+            { t: "Guest profiles", d: "Preferences, allergies, languages, VIP notes and history at a glance." },
+            { t: "Itineraries", d: "Activity cards by day with vendors, prices and confirmation numbers." },
+            { t: "Calendar", d: "All properties, all guests, color-coded by confirmation status." },
           ].map((f) => (
             <div key={f.t} className="border-t border-gold/40 pt-6">
               <h3 className="font-display text-2xl text-primary">{f.t}</h3>

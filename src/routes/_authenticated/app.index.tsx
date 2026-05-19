@@ -1,252 +1,251 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { Plus, Calendar, ChevronRight } from "lucide-react";
+import { format, parseISO, addDays, isSameDay, startOfDay } from "date-fns";
+import { Plus, Search, CalendarCheck, Clock, Users, BedDouble } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ActivityCard, type ActivityRow } from "@/components/activity-card";
+import { GuestTagPill } from "@/components/guest-tag-pill";
+import { ActivityDialog } from "@/components/activity-dialog";
+import type { GuestTag } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/app/")({
-  component: ItinerariesPage,
+  component: Dashboard,
 });
 
-interface Itinerary {
+interface DashGuest {
   id: string;
-  title: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  guest_id: string;
-  guests: { full_name: string; room_number: string | null } | null;
+  full_name: string;
+  property: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  tags: string[];
 }
 
-interface GuestLite { id: string; full_name: string; room_number: string | null }
+interface DashActivity extends ActivityRow {
+  guests: { full_name: string; property: string | null } | null;
+}
 
-function ItinerariesPage() {
+function Dashboard() {
+  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
-  const { data: itineraries, refetch } = useQuery({
-    queryKey: ["itineraries"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("itineraries")
-        .select("id, title, start_date, end_date, status, guest_id, guests(full_name, room_number)")
-        .order("start_date", { ascending: false });
-      if (error) throw error;
-      return data as unknown as Itinerary[];
-    },
-  });
+  const today = startOfDay(new Date());
+  const todayIso = format(today, "yyyy-MM-dd");
+  const inSevenDays = format(addDays(today, 7), "yyyy-MM-dd");
 
-  const { data: guests, refetch: refetchGuests } = useQuery({
-    queryKey: ["guests-lite"],
+  const { data: guests } = useQuery({
+    queryKey: ["dashboard", "guests"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("guests")
-        .select("id, full_name, room_number")
-        .order("full_name");
+        .select("id, full_name, property, check_in, check_out, tags");
       if (error) throw error;
-      return data as GuestLite[];
+      return data as DashGuest[];
     },
   });
 
+  const { data: activities } = useQuery({
+    queryKey: ["dashboard", "activities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, guests(full_name, property)")
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data as unknown as DashActivity[];
+    },
+  });
+
+  const activeToday = useMemo(
+    () => (guests ?? []).filter((g) =>
+      g.check_in && g.check_out &&
+      parseISO(g.check_in) <= today && parseISO(g.check_out) >= today),
+    [guests, today],
+  );
+  const upcomingCheckins = useMemo(
+    () => (guests ?? []).filter((g) =>
+      g.check_in && parseISO(g.check_in) >= today && parseISO(g.check_in) <= addDays(today, 7))
+      .sort((a, b) => (a.check_in! < b.check_in! ? -1 : 1)),
+    [guests, today],
+  );
+  const pending = (activities ?? []).filter((a) => a.status === "Requested");
+  const todayConfirmed = (activities ?? []).filter(
+    (a) => a.status === "Confirmed" && isSameDay(parseISO(a.date), today),
+  );
+
+  const search = q.trim().toLowerCase();
+  const guestHits = search
+    ? (guests ?? []).filter((g) => g.full_name.toLowerCase().includes(search)).slice(0, 5)
+    : [];
+  const activityHits = search
+    ? (activities ?? []).filter((a) => a.name.toLowerCase().includes(search)).slice(0, 5)
+    : [];
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gold">Studio</p>
-          <h1 className="mt-1 font-display text-3xl text-primary md:text-4xl">Itineraries</h1>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-gold">Today · {format(today, "EEEE, MMM d")}</p>
+          <h1 className="mt-1 font-display text-3xl text-primary md:text-4xl">Bellamare desk</h1>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link to="/app/guests"><UserPlus className="mr-2 h-4 w-4" /> Guests</Link>
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> New itinerary</Button>
-            </DialogTrigger>
-            {open && (
-              <NewItineraryDialog
-                guests={guests ?? []}
-                onGuestCreated={refetchGuests}
-                onCreated={() => { setOpen(false); refetch(); }}
-              />
+        <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Add activity</Button>
+      </div>
+
+      {/* Global search */}
+      <div className="relative mt-6">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Search guests or activities…"
+          className="pl-9 h-11"
+        />
+        {search && (guestHits.length || activityHits.length) ? (
+          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover shadow-elegant">
+            {guestHits.length > 0 && (
+              <div className="border-b border-border">
+                <p className="px-3 pt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Guests</p>
+                {guestHits.map((g) => (
+                  <Link key={g.id} to="/app/guests/$guestId" params={{ guestId: g.id }} onClick={() => setQ("")} className="block px-3 py-2 text-sm hover:bg-accent">
+                    {g.full_name} <span className="text-muted-foreground">· {g.property ?? "—"}</span>
+                  </Link>
+                ))}
+              </div>
             )}
-          </Dialog>
-        </div>
-      </div>
-
-
-      <div className="mt-8 grid gap-4">
-        {itineraries?.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border p-12 text-center">
-            <Calendar className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              No itineraries yet. Create your first one.
-            </p>
+            {activityHits.length > 0 && (
+              <div>
+                <p className="px-3 pt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Activities</p>
+                {activityHits.map((a) => (
+                  <Link key={a.id} to="/app/guests/$guestId" params={{ guestId: a.guest_id }} onClick={() => setQ("")} className="block px-3 py-2 text-sm hover:bg-accent">
+                    {a.name} <span className="text-muted-foreground">· {a.guests?.full_name ?? ""}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-        {itineraries?.map((it) => (
-          <Link
-            key={it.id}
-            to="/app/itineraries/$itineraryId"
-            params={{ itineraryId: it.id }}
-            className="group flex items-center justify-between rounded-lg border border-border bg-card px-6 py-5 shadow-sm transition-all hover:border-gold hover:shadow-elegant"
-          >
-            <div>
-              <h3 className="font-display text-xl text-primary">{it.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {it.guests?.full_name ?? "—"}
-                {it.guests?.room_number && <> · Room {it.guests.room_number}</>}
-                {" · "}
-                {format(new Date(it.start_date), "MMM d")} – {format(new Date(it.end_date), "MMM d, yyyy")}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-gold/40 px-3 py-1 text-xs uppercase tracking-wider text-gold">
-                {it.status}
-              </span>
-              <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
-        ))}
+        ) : null}
       </div>
+
+      {/* Stat tiles */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile label="In-residence today" value={activeToday.length} icon={Users} />
+        <StatTile label="Check-ins · 7 days" value={upcomingCheckins.length} icon={BedDouble} />
+        <StatTile label="Pending confirmation" value={pending.length} icon={Clock} accent />
+        <StatTile label="Today · confirmed" value={todayConfirmed.length} icon={CalendarCheck} />
+      </div>
+
+      {/* Two-column lists */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section>
+          <h2 className="font-display text-xl text-primary">Today's schedule</h2>
+          <div className="mt-3 space-y-3">
+            {todayConfirmed.length === 0 && (
+              <p className="rounded-md border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+                Nothing confirmed for today.
+              </p>
+            )}
+            {todayConfirmed.map((a) => (
+              <ActivityCard key={a.id} activity={a} guestLabel={a.guests?.full_name ?? undefined} />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl text-primary">Pending requests</h2>
+          <div className="mt-3 space-y-3">
+            {pending.length === 0 && (
+              <p className="rounded-md border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+                All caught up.
+              </p>
+            )}
+            {pending.slice(0, 8).map((a) => (
+              <ActivityCard key={a.id} activity={a} guestLabel={a.guests?.full_name ?? undefined} />
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <section>
+          <h2 className="font-display text-xl text-primary">Upcoming check-ins</h2>
+          <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
+            {upcomingCheckins.length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">None in the next 7 days.</p>
+            )}
+            {upcomingCheckins.map((g) => (
+              <Link
+                key={g.id}
+                to="/app/guests/$guestId"
+                params={{ guestId: g.id }}
+                className="flex items-center justify-between px-4 py-3 hover:bg-accent/40"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-primary truncate">{g.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{g.property ?? "—"} · {format(parseISO(g.check_in!), "MMM d")}</p>
+                </div>
+                <div className="flex gap-1">
+                  {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl text-primary">In-residence today</h2>
+          <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
+            {activeToday.length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">No active guests.</p>
+            )}
+            {activeToday.map((g) => (
+              <Link
+                key={g.id}
+                to="/app/guests/$guestId"
+                params={{ guestId: g.id }}
+                className="flex items-center justify-between px-4 py-3 hover:bg-accent/40"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-primary truncate">{g.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {g.property ?? "—"} · until {g.check_out ? format(parseISO(g.check_out), "MMM d") : "—"}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <ActivityDialog open={open} onOpenChange={setOpen} defaultDate={todayIso} />
+      <p className="sr-only">{inSevenDays}</p>
     </div>
   );
 }
 
-function NewItineraryDialog({ guests, onCreated, onGuestCreated }: { guests: GuestLite[]; onCreated: () => void; onGuestCreated: () => void }) {
-  const [title, setTitle] = useState("");
-  const [guestId, setGuestId] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [addingGuest, setAddingGuest] = useState(guests.length === 0);
-  const [newGuest, setNewGuest] = useState({ full_name: "", room_number: "", phone: "" });
-
-  const createGuest = async () => {
-    if (!newGuest.full_name.trim()) {
-      toast.error("Guest name is required");
-      return;
-    }
-    const { data, error } = await supabase.from("guests").insert({
-      full_name: newGuest.full_name.trim(),
-      room_number: newGuest.room_number || null,
-      phone: newGuest.phone || null,
-    }).select("id").single();
-    if (error) { toast.error(error.message); return; }
-    toast.success("Guest added");
-    setGuestId(data.id);
-    setNewGuest({ full_name: "", room_number: "", phone: "" });
-    setAddingGuest(false);
-    onGuestCreated();
-  };
-
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guestId) { toast.error("Please select or add a guest"); return; }
-    setBusy(true);
-    const { error } = await supabase.from("itineraries").insert({
-      guest_id: guestId, title, start_date: start, end_date: end, notes: notes || null,
-    });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Itinerary created");
-    setTitle(""); setGuestId(""); setStart(""); setEnd(""); setNotes("");
-    onCreated();
-  };
-
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  accent?: boolean;
+}) {
   return (
-    <DialogContent className="max-h-[90vh] overflow-y-auto">
-      <DialogHeader><DialogTitle className="font-display text-2xl">New itinerary</DialogTitle></DialogHeader>
-      <form onSubmit={submit} className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Guest</Label>
-            {guests.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setAddingGuest((v) => !v)}
-                className="text-xs text-gold hover:underline"
-              >
-                {addingGuest ? "Pick existing" : "+ New guest"}
-              </button>
-            )}
-          </div>
-
-          {addingGuest ? (
-            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-              <Input
-                placeholder="Full name *"
-                value={newGuest.full_name}
-                onChange={(e) => setNewGuest({ ...newGuest, full_name: e.target.value })}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Room"
-                  value={newGuest.room_number}
-                  onChange={(e) => setNewGuest({ ...newGuest, room_number: e.target.value })}
-                />
-                <Input
-                  placeholder="Phone"
-                  value={newGuest.phone}
-                  onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
-                />
-              </div>
-              <Button type="button" size="sm" onClick={createGuest} className="w-full">
-                Save guest
-              </Button>
-              {guestId && (
-                <p className="text-xs text-muted-foreground">✓ Guest added & selected</p>
-              )}
-            </div>
-          ) : (
-            <Select value={guestId} onValueChange={setGuestId} required>
-              <SelectTrigger><SelectValue placeholder="Select guest" /></SelectTrigger>
-              <SelectContent>
-                {guests.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.full_name}{g.room_number ? ` · Room ${g.room_number}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Anniversary Weekend" required />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Start</Label>
-            <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label>End</Label>
-            <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Notes</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-        </div>
-        <DialogFooter>
-          <Button type="submit" disabled={busy || !guestId}>{busy ? "Creating…" : "Create"}</Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
+    <div className={`rounded-lg border bg-card p-4 ${accent ? "border-gold/50" : "border-border"}`}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+        <Icon className={`h-4 w-4 ${accent ? "text-gold" : "text-muted-foreground"}`} />
+      </div>
+      <p className="mt-2 font-display text-3xl text-primary">{value}</p>
+    </div>
   );
 }
