@@ -26,7 +26,7 @@ export type Database = {
           location_name: string | null
           longitude: number | null
           notes: string | null
-          owner_id: string
+          owner_id: string | null
           phone: string | null
           start_time: string
           title: string
@@ -44,7 +44,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           notes?: string | null
-          owner_id: string
+          owner_id?: string | null
           phone?: string | null
           start_time: string
           title: string
@@ -62,7 +62,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           notes?: string | null
-          owner_id?: string
+          owner_id?: string | null
           phone?: string | null
           start_time?: string
           title?: string
@@ -86,7 +86,7 @@ export type Database = {
           full_name: string
           id: string
           notes: string | null
-          owner_id: string
+          owner_id: string | null
           phone: string | null
           preferences: string | null
           room_number: string | null
@@ -98,7 +98,7 @@ export type Database = {
           full_name: string
           id?: string
           notes?: string | null
-          owner_id: string
+          owner_id?: string | null
           phone?: string | null
           preferences?: string | null
           room_number?: string | null
@@ -110,7 +110,7 @@ export type Database = {
           full_name?: string
           id?: string
           notes?: string | null
-          owner_id?: string
+          owner_id?: string | null
           phone?: string | null
           preferences?: string | null
           room_number?: string | null
@@ -125,7 +125,7 @@ export type Database = {
           guest_id: string
           id: string
           notes: string | null
-          owner_id: string
+          owner_id: string | null
           start_date: string
           status: string
           title: string
@@ -137,7 +137,7 @@ export type Database = {
           guest_id: string
           id?: string
           notes?: string | null
-          owner_id: string
+          owner_id?: string | null
           start_date: string
           status?: string
           title: string
@@ -149,7 +149,7 @@ export type Database = {
           guest_id?: string
           id?: string
           notes?: string | null
-          owner_id?: string
+          owner_id?: string | null
           start_date?: string
           status?: string
           title?: string
