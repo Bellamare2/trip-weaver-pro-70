@@ -125,7 +125,7 @@ function ItinerariesPage() {
   );
 }
 
-function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCreated: () => void }) {
+function NewItineraryDialog({ guests, onCreated, onGuestCreated }: { guests: GuestLite[]; onCreated: () => void; onGuestCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [guestId, setGuestId] = useState("");
   const [start, setStart] = useState("");
@@ -148,8 +148,11 @@ function NewItineraryDialog({ guests, onCreated }: { guests: GuestLite[]; onCrea
     if (error) { toast.error(error.message); return; }
     toast.success("Guest added");
     setGuestId(data.id);
+    setNewGuest({ full_name: "", room_number: "", phone: "" });
     setAddingGuest(false);
+    onGuestCreated();
   };
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
