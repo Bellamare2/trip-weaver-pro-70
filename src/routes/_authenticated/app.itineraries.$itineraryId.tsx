@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { searchPlaces, type PlaceResult } from "@/lib/places.functions";
 
-export const Route = createFileRoute("/_authenticated/itineraries/$itineraryId")({
+export const Route = createFileRoute("/_authenticated/app/itineraries/$itineraryId")({
   component: ItineraryDetail,
 });
 
