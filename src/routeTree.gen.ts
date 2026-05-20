@@ -13,9 +13,18 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppVendorsRouteImport } from './routes/_authenticated/app.vendors'
+import { Route as AuthenticatedAppVehiclesRouteImport } from './routes/_authenticated/app.vehicles'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated/app.reports'
+import { Route as AuthenticatedAppMaintenanceRouteImport } from './routes/_authenticated/app.maintenance'
+import { Route as AuthenticatedAppInspectionsRouteImport } from './routes/_authenticated/app.inspections'
+import { Route as AuthenticatedAppExpensesRouteImport } from './routes/_authenticated/app.expenses'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
+import { Route as AuthenticatedAppArrivalsRouteImport } from './routes/_authenticated/app.arrivals'
+import { Route as AuthenticatedAppPropertiesIndexRouteImport } from './routes/_authenticated/app.properties.index'
 import { Route as AuthenticatedAppGuestsIndexRouteImport } from './routes/_authenticated/app.guests.index'
+import { Route as AuthenticatedAppPropertiesPropertyIdRouteImport } from './routes/_authenticated/app.properties.$propertyId'
 import { Route as AuthenticatedAppGuestsGuestIdRouteImport } from './routes/_authenticated/app.guests.$guestId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -37,10 +46,44 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAppVendorsRoute = AuthenticatedAppVendorsRouteImport.update({
+  id: '/app/vendors',
+  path: '/app/vendors',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppVehiclesRoute =
+  AuthenticatedAppVehiclesRouteImport.update({
+    id: '/app/vehicles',
+    path: '/app/vehicles',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
     id: '/app/settings',
     path: '/app/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppReportsRoute = AuthenticatedAppReportsRouteImport.update({
+  id: '/app/reports',
+  path: '/app/reports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppMaintenanceRoute =
+  AuthenticatedAppMaintenanceRouteImport.update({
+    id: '/app/maintenance',
+    path: '/app/maintenance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppInspectionsRoute =
+  AuthenticatedAppInspectionsRouteImport.update({
+    id: '/app/inspections',
+    path: '/app/inspections',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppExpensesRoute =
+  AuthenticatedAppExpensesRouteImport.update({
+    id: '/app/expenses',
+    path: '/app/expenses',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAppCalendarRoute =
@@ -49,10 +92,28 @@ const AuthenticatedAppCalendarRoute =
     path: '/app/calendar',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppArrivalsRoute =
+  AuthenticatedAppArrivalsRouteImport.update({
+    id: '/app/arrivals',
+    path: '/app/arrivals',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppPropertiesIndexRoute =
+  AuthenticatedAppPropertiesIndexRouteImport.update({
+    id: '/app/properties/',
+    path: '/app/properties/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppGuestsIndexRoute =
   AuthenticatedAppGuestsIndexRouteImport.update({
     id: '/app/guests/',
     path: '/app/guests/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppPropertiesPropertyIdRoute =
+  AuthenticatedAppPropertiesPropertyIdRouteImport.update({
+    id: '/app/properties/$propertyId',
+    path: '/app/properties/$propertyId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAppGuestsGuestIdRoute =
@@ -65,61 +126,115 @@ const AuthenticatedAppGuestsGuestIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/arrivals': typeof AuthenticatedAppArrivalsRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/app/expenses': typeof AuthenticatedAppExpensesRoute
+  '/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/vehicles': typeof AuthenticatedAppVehiclesRoute
+  '/app/vendors': typeof AuthenticatedAppVendorsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
+  '/app/properties/$propertyId': typeof AuthenticatedAppPropertiesPropertyIdRoute
   '/app/guests/': typeof AuthenticatedAppGuestsIndexRoute
+  '/app/properties/': typeof AuthenticatedAppPropertiesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/arrivals': typeof AuthenticatedAppArrivalsRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/app/expenses': typeof AuthenticatedAppExpensesRoute
+  '/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/vehicles': typeof AuthenticatedAppVehiclesRoute
+  '/app/vendors': typeof AuthenticatedAppVendorsRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
+  '/app/properties/$propertyId': typeof AuthenticatedAppPropertiesPropertyIdRoute
   '/app/guests': typeof AuthenticatedAppGuestsIndexRoute
+  '/app/properties': typeof AuthenticatedAppPropertiesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/app/arrivals': typeof AuthenticatedAppArrivalsRoute
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/_authenticated/app/expenses': typeof AuthenticatedAppExpensesRoute
+  '/_authenticated/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/_authenticated/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
+  '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/vehicles': typeof AuthenticatedAppVehiclesRoute
+  '/_authenticated/app/vendors': typeof AuthenticatedAppVendorsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/guests/$guestId': typeof AuthenticatedAppGuestsGuestIdRoute
+  '/_authenticated/app/properties/$propertyId': typeof AuthenticatedAppPropertiesPropertyIdRoute
   '/_authenticated/app/guests/': typeof AuthenticatedAppGuestsIndexRoute
+  '/_authenticated/app/properties/': typeof AuthenticatedAppPropertiesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/app/arrivals'
     | '/app/calendar'
+    | '/app/expenses'
+    | '/app/inspections'
+    | '/app/maintenance'
+    | '/app/reports'
     | '/app/settings'
+    | '/app/vehicles'
+    | '/app/vendors'
     | '/app/'
     | '/app/guests/$guestId'
+    | '/app/properties/$propertyId'
     | '/app/guests/'
+    | '/app/properties/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/app/arrivals'
     | '/app/calendar'
+    | '/app/expenses'
+    | '/app/inspections'
+    | '/app/maintenance'
+    | '/app/reports'
     | '/app/settings'
+    | '/app/vehicles'
+    | '/app/vendors'
     | '/app'
     | '/app/guests/$guestId'
+    | '/app/properties/$propertyId'
     | '/app/guests'
+    | '/app/properties'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/app/arrivals'
     | '/_authenticated/app/calendar'
+    | '/_authenticated/app/expenses'
+    | '/_authenticated/app/inspections'
+    | '/_authenticated/app/maintenance'
+    | '/_authenticated/app/reports'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/vehicles'
+    | '/_authenticated/app/vendors'
     | '/_authenticated/app/'
     | '/_authenticated/app/guests/$guestId'
+    | '/_authenticated/app/properties/$propertyId'
     | '/_authenticated/app/guests/'
+    | '/_authenticated/app/properties/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,11 +273,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/vendors': {
+      id: '/_authenticated/app/vendors'
+      path: '/app/vendors'
+      fullPath: '/app/vendors'
+      preLoaderRoute: typeof AuthenticatedAppVendorsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/vehicles': {
+      id: '/_authenticated/app/vehicles'
+      path: '/app/vehicles'
+      fullPath: '/app/vehicles'
+      preLoaderRoute: typeof AuthenticatedAppVehiclesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/app/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/reports': {
+      id: '/_authenticated/app/reports'
+      path: '/app/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AuthenticatedAppReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/maintenance': {
+      id: '/_authenticated/app/maintenance'
+      path: '/app/maintenance'
+      fullPath: '/app/maintenance'
+      preLoaderRoute: typeof AuthenticatedAppMaintenanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/inspections': {
+      id: '/_authenticated/app/inspections'
+      path: '/app/inspections'
+      fullPath: '/app/inspections'
+      preLoaderRoute: typeof AuthenticatedAppInspectionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/expenses': {
+      id: '/_authenticated/app/expenses'
+      path: '/app/expenses'
+      fullPath: '/app/expenses'
+      preLoaderRoute: typeof AuthenticatedAppExpensesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/calendar': {
@@ -172,11 +329,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/arrivals': {
+      id: '/_authenticated/app/arrivals'
+      path: '/app/arrivals'
+      fullPath: '/app/arrivals'
+      preLoaderRoute: typeof AuthenticatedAppArrivalsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/properties/': {
+      id: '/_authenticated/app/properties/'
+      path: '/app/properties'
+      fullPath: '/app/properties/'
+      preLoaderRoute: typeof AuthenticatedAppPropertiesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/guests/': {
       id: '/_authenticated/app/guests/'
       path: '/app/guests'
       fullPath: '/app/guests/'
       preLoaderRoute: typeof AuthenticatedAppGuestsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/properties/$propertyId': {
+      id: '/_authenticated/app/properties/$propertyId'
+      path: '/app/properties/$propertyId'
+      fullPath: '/app/properties/$propertyId'
+      preLoaderRoute: typeof AuthenticatedAppPropertiesPropertyIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/guests/$guestId': {
@@ -190,19 +368,38 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAppArrivalsRoute: typeof AuthenticatedAppArrivalsRoute
   AuthenticatedAppCalendarRoute: typeof AuthenticatedAppCalendarRoute
+  AuthenticatedAppExpensesRoute: typeof AuthenticatedAppExpensesRoute
+  AuthenticatedAppInspectionsRoute: typeof AuthenticatedAppInspectionsRoute
+  AuthenticatedAppMaintenanceRoute: typeof AuthenticatedAppMaintenanceRoute
+  AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppVehiclesRoute: typeof AuthenticatedAppVehiclesRoute
+  AuthenticatedAppVendorsRoute: typeof AuthenticatedAppVendorsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppGuestsGuestIdRoute: typeof AuthenticatedAppGuestsGuestIdRoute
+  AuthenticatedAppPropertiesPropertyIdRoute: typeof AuthenticatedAppPropertiesPropertyIdRoute
   AuthenticatedAppGuestsIndexRoute: typeof AuthenticatedAppGuestsIndexRoute
+  AuthenticatedAppPropertiesIndexRoute: typeof AuthenticatedAppPropertiesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppArrivalsRoute: AuthenticatedAppArrivalsRoute,
   AuthenticatedAppCalendarRoute: AuthenticatedAppCalendarRoute,
+  AuthenticatedAppExpensesRoute: AuthenticatedAppExpensesRoute,
+  AuthenticatedAppInspectionsRoute: AuthenticatedAppInspectionsRoute,
+  AuthenticatedAppMaintenanceRoute: AuthenticatedAppMaintenanceRoute,
+  AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppVehiclesRoute: AuthenticatedAppVehiclesRoute,
+  AuthenticatedAppVendorsRoute: AuthenticatedAppVendorsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppGuestsGuestIdRoute: AuthenticatedAppGuestsGuestIdRoute,
+  AuthenticatedAppPropertiesPropertyIdRoute:
+    AuthenticatedAppPropertiesPropertyIdRoute,
   AuthenticatedAppGuestsIndexRoute: AuthenticatedAppGuestsIndexRoute,
+  AuthenticatedAppPropertiesIndexRoute: AuthenticatedAppPropertiesIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -43,7 +43,7 @@ function ArrivalsPage() {
 
   const toggle = useMutation({
     mutationFn: async ({ id, items }: { id: string; items: ChecklistItem[] }) => {
-      const { error } = await supabase.from("stay_checklists").update({ items }).eq("id", id);
+      const { error } = await supabase.from("stay_checklists").update({ items: items as unknown as never }).eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["stay_checklists"] }),
