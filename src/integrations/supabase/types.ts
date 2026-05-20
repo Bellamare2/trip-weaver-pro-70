@@ -76,6 +76,57 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount_usd: number
+          category: string
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          invoice_url: string | null
+          property_id: string
+          vendor_id: string | null
+        }
+        Insert: {
+          amount_usd?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          invoice_url?: string | null
+          property_id: string
+          vendor_id?: string | null
+        }
+        Update: {
+          amount_usd?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          invoice_url?: string | null
+          property_id?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           allergies: string | null
@@ -157,6 +208,157 @@ export type Database = {
         }
         Relationships: []
       }
+      inspection_findings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          inspection_id: string
+          photos: string[]
+          priority: string
+          status: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          inspection_id: string
+          photos?: string[]
+          priority?: string
+          status?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          inspection_id?: string
+          photos?: string[]
+          priority?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_findings_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          inspector_name: string | null
+          overall_status: string
+          property_id: string
+          summary: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          inspector_name?: string | null
+          overall_status?: string
+          property_id: string
+          summary?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          inspector_name?: string | null
+          overall_status?: string
+          property_id?: string
+          summary?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_tickets: {
+        Row: {
+          cost_estimate: number | null
+          created_at: string
+          description: string | null
+          id: string
+          invoice_url: string | null
+          owner_approval_status: string
+          photos: string[]
+          priority: string
+          property_id: string
+          scheduled_for: string | null
+          status: string
+          title: string
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          cost_estimate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_url?: string | null
+          owner_approval_status?: string
+          photos?: string[]
+          priority?: string
+          property_id: string
+          scheduled_for?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          cost_estimate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_url?: string | null
+          owner_approval_status?: string
+          photos?: string[]
+          priority?: string
+          property_id?: string
+          scheduled_for?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_tickets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_tickets_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -180,19 +382,305 @@ export type Database = {
       }
       properties: {
         Row: {
+          address: string | null
+          alarm_code: string | null
+          alarm_company: string | null
+          community: string | null
           created_at: string
+          emergency_contacts: Json
+          floor_plan_url: string | null
+          gate_codes: string | null
+          gps: string | null
+          id: string
+          insurance: Json
+          name: string
+          notes: string | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          photos: string[]
+          property_tax: Json
+          updated_at: string
+          utility_providers: Json
+          wifi_password: string | null
+          wifi_ssid: string | null
+        }
+        Insert: {
+          address?: string | null
+          alarm_code?: string | null
+          alarm_company?: string | null
+          community?: string | null
+          created_at?: string
+          emergency_contacts?: Json
+          floor_plan_url?: string | null
+          gate_codes?: string | null
+          gps?: string | null
+          id?: string
+          insurance?: Json
+          name: string
+          notes?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          photos?: string[]
+          property_tax?: Json
+          updated_at?: string
+          utility_providers?: Json
+          wifi_password?: string | null
+          wifi_ssid?: string | null
+        }
+        Update: {
+          address?: string | null
+          alarm_code?: string | null
+          alarm_company?: string | null
+          community?: string | null
+          created_at?: string
+          emergency_contacts?: Json
+          floor_plan_url?: string | null
+          gate_codes?: string | null
+          gps?: string | null
+          id?: string
+          insurance?: Json
+          name?: string
+          notes?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          photos?: string[]
+          property_tax?: Json
+          updated_at?: string
+          utility_providers?: Json
+          wifi_password?: string | null
+          wifi_ssid?: string | null
+        }
+        Relationships: []
+      }
+      property_documents: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          file_url: string | null
           id: string
           name: string
+          property_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          name: string
+          property_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          property_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_service_providers: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string
+          role: string
+          vendor_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          name: string
+          property_id: string
+          role: string
+          vendor_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          property_id?: string
+          role?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_service_providers_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_service_providers_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stay_checklists: {
+        Row: {
+          created_at: string
+          guest_id: string | null
+          id: string
+          items: Json
+          property_id: string
+          scheduled_date: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          guest_id?: string | null
+          id?: string
+          items?: Json
+          property_id: string
+          scheduled_date?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          guest_id?: string | null
+          id?: string
+          items?: Json
+          property_id?: string
+          scheduled_date?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_checklists_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_checklists_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          battery_status: string | null
+          created_at: string
+          fuel_level: string | null
+          id: string
+          insurance_expires_at: string | null
+          last_inspection_at: string | null
+          make: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          property_id: string | null
+          registration_expires_at: string | null
+          updated_at: string
+          vin: string | null
+          year: number | null
+        }
+        Insert: {
+          battery_status?: string | null
+          created_at?: string
+          fuel_level?: string | null
+          id?: string
+          insurance_expires_at?: string | null
+          last_inspection_at?: string | null
+          make?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          property_id?: string | null
+          registration_expires_at?: string | null
+          updated_at?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Update: {
+          battery_status?: string | null
+          created_at?: string
+          fuel_level?: string | null
+          id?: string
+          insurance_expires_at?: string | null
+          last_inspection_at?: string | null
+          make?: string | null
+          model?: string | null
           name?: string
+          notes?: string | null
+          property_id?: string | null
+          registration_expires_at?: string | null
+          updated_at?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          category: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          insurance_expires_at: string | null
+          insurance_status: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          insurance_expires_at?: string | null
+          insurance_status?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          insurance_expires_at?: string | null
+          insurance_status?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

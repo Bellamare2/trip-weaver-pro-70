@@ -55,3 +55,62 @@ export function nextStatus(s: ActivityStatus): ActivityStatus {
   const i = STATUSES.indexOf(s);
   return STATUSES[(i + 1) % STATUSES.length];
 }
+
+// ── Property OS domain ────────────────────────────────────────────
+export const VENDOR_CATEGORIES = [
+  "Pool", "Landscaping", "Housekeeping", "Plumbing", "Electrical",
+  "HVAC", "General Maintenance", "Security", "Concierge", "Other",
+] as const;
+export type VendorCategory = (typeof VENDOR_CATEGORIES)[number];
+
+export const INSURANCE_STATUSES = ["Active", "Expired", "Pending", "Unknown"] as const;
+export type InsuranceStatus = (typeof INSURANCE_STATUSES)[number];
+
+export const INSPECTION_TYPES = ["Weekly", "Arrival", "Departure", "Special"] as const;
+export type InspectionType = (typeof INSPECTION_TYPES)[number];
+
+export const INSPECTION_CATEGORIES = [
+  "Exterior", "Interior", "HVAC", "Plumbing", "Electrical",
+  "Pool", "Landscaping", "Vehicles", "Security",
+] as const;
+
+export const PRIORITY_LEVELS = ["Low", "Normal", "High", "Urgent"] as const;
+export type Priority = (typeof PRIORITY_LEVELS)[number];
+
+export const MAINTENANCE_STATUSES = [
+  "Open", "Waiting Owner Approval", "Scheduled", "In Progress", "Completed",
+] as const;
+export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number];
+
+export const maintenanceStatusStyles: Record<MaintenanceStatus, string> = {
+  "Open": "bg-warning/15 border-warning/40 [&]:text-[oklch(0.42_0.10_85)]",
+  "Waiting Owner Approval": "bg-gold/15 border-gold/40 [&]:text-[oklch(0.42_0.13_80)]",
+  "Scheduled": "bg-primary/10 border-primary/30 text-primary",
+  "In Progress": "bg-accent border-accent-foreground/20 text-accent-foreground",
+  "Completed": "bg-success/15 border-success/40 [&]:text-[oklch(0.40_0.12_150)]",
+};
+
+export const EXPENSE_CATEGORIES = [
+  "Utilities", "Maintenance", "Pool", "Landscaping",
+  "Housekeeping", "Concierge", "Repairs", "Other",
+] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export const ARRIVAL_CHECKLIST_DEFAULT = [
+  "AC Activated", "Pool Checked", "Lighting Tested", "Appliances Tested",
+  "Groceries Delivered", "Vehicle Ready", "Welcome Set",
+];
+export const DEPARTURE_CHECKLIST_DEFAULT = [
+  "Utilities Secured", "Vehicles Stored", "Property Locked",
+  "Final Inspection Completed", "Linens Collected",
+];
+
+export const PROVIDER_ROLES = [
+  "Pool", "Landscaping", "Housekeeping", "Electrician",
+  "Plumber", "HVAC Technician", "Security", "Other",
+] as const;
+
+export const DOCUMENT_TYPES = [
+  "Insurance Policy", "HOA Document", "Warranty", "Floor Plan", "Other",
+] as const;
+
