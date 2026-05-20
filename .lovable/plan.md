@@ -1,103 +1,122 @@
 
-# Bellamare Concierge — build plan
+# Bellamare Property OS — build plan
 
-Rebuilds the existing app to match the new brief. Keeps Lovable Cloud as the database, no auth (single-user internal tool as specified).
+Transforms the current guest-itinerary app into a full property management operating system for luxury Los Cabos homes. This is a large multi-phase rebuild; I'll ship it in clearly-scoped phases so each phase is reviewable and the app stays usable between them.
 
-## 1. Rebrand
+## 1. Architecture & access model
 
-- App name everywhere: **Bellamare Concierge** (Los Cabos, Mexico).
-- Palette: deep navy + warm sand + subtle gold accent. Refresh tokens in `src/styles.css`.
-- Typography: **Playfair Display** (headings) + **Inter** (body). Load via Google Fonts in `__root.tsx` head.
-- New landing page copy reflecting luxury property management.
+Three roles backed by a `user_roles` table (`manager`, `owner`, `vendor`):
+- **Manager** — full access to everything.
+- **Owner** — read-only portal scoped to their properties only.
+- **Vendor** — read/update only on maintenance tickets assigned to them.
 
-## 2. Data model changes
+Auth: enable email/password + Google sign-in (currently no auth). Use the standard `profiles` + `user_roles` + `has_role()` security-definer pattern. RLS policies on every new table keyed off role + property ownership.
 
-The current schema has separate `itineraries` and `events` tables. The brief treats an itinerary as **the guest's collection of activity cards** — no wrapper entity. We collapse to a single `activities` table per guest.
+Sidebar reorganizes into sections: **Operations** (Dashboard, Calendar, Inspections, Maintenance, Arrivals/Departures), **Catalog** (Properties, Vendors, Vehicles, Guests), **Finance** (Expenses, Reports), **Settings**. Owner role sees a slimmed sidebar (Dashboard, My Properties, Reports, Messages).
 
-Migration:
+## 2. Data model (new tables)
 
-- **Extend `guests`** with new columns:
-  - `nationality text`, `email text` (exists), `whatsapp text`, `phone text` (exists), `language text`
-  - `property text` (free-text property name)
-  - `check_in date`, `check_out date`, `party_size int`
-  - `tags text[]` — values: `VIP | Returning | First Stay | Corporate`
-  - `dietary text`, `room_prefs text`, `favorite_activities text`, `allergies text`, `vip_notes text`, `special_notes text`
-- **Create `activities`** table replacing the role of `events`:
-  - `id`, `guest_id` (FK → guests, cascade)
-  - `name text`, `category text` (Dining/Transportation/Excursion/Spa/Private Chef/Grocery/Housekeeping/Other)
-  - `date date`, `start_time time`, `duration_minutes int`
-  - `vendor text`, `location text`, `notes text`
-  - `price_usd numeric`, `confirmation_number text`
-  - `status text default 'Requested'` (Requested/Confirmed/Cancelled)
-  - `created_at`, `updated_at`
-- **Drop** `itineraries` and `events` tables (no production data — empty per recent query).
-- RLS: keep public access policies (no auth).
+Keep existing `guests` + `activities` (concierge module stays). Add:
 
-## 3. Routes & navigation
+- `properties` (expand existing) — add address, community, gps, photos[], wifi_ssid, wifi_password, gate_codes, alarm_code, alarm_company, utility_providers (jsonb), insurance (jsonb), property_tax (jsonb), floor_plan_url, owner_user_id, emergency_contacts (jsonb)
+- `property_documents` — property_id, type, name, file_url, expires_at
+- `property_service_providers` — property_id, vendor_id, role (pool/landscape/etc.)
+- `vendors` — name, category, contact_name, phone, email, insurance_status, insurance_expires_at, notes
+- `inspections` — property_id, inspector_id, type, date, overall_status, summary, pdf_url
+- `inspection_findings` — inspection_id, category, description, priority, photos[], status
+- `maintenance_tickets` — property_id, title, description, photos[], vendor_id, status, priority, cost_estimate, invoice_url, owner_approval_status, created_at
+- `maintenance_comments` — ticket_id, author_id, body
+- `expenses` — property_id, date, vendor_id, category, amount_usd, invoice_url, description
+- `arrival_departure_checklists` — property_id, type (arrival/departure), scheduled_date, items (jsonb of {label, done, done_at, done_by})
+- `vehicles` — property_id, name, make, model, year, vin, insurance_expires_at, registration_expires_at, last_inspection_at, battery_status, fuel_level
+- `calendar_events` — virtual view aggregating arrivals, departures, inspections, maintenance, vendor visits (built client-side from existing tables; no new table)
+- `owner_messages` — property_id, from_user_id, to_user_id, body, read_at
 
-New structure under `_authenticated` layout (kept as a generic app layout, no auth check):
+All tables get RLS: managers full access; owners select-only scoped via `properties.owner_user_id = auth.uid()`; vendors select/update on their assigned tickets only.
+
+## 3. Modules & routes
 
 ```
-src/routes/_authenticated/
-  app.index.tsx                  -> /app          Dashboard (home)
-  app.guests.index.tsx           -> /app/guests   Guest list
-  app.guests.$guestId.tsx        -> /app/guests/:id  Tabs: Overview | Preferences | Itinerary | History
-  app.calendar.tsx               -> /app/calendar Month/week calendar
-  app.settings.tsx               -> /app/settings Properties + tag colors
+/app                            Dashboard (KPIs)
+/app/properties                 List + filters
+/app/properties/$id             Tabs: Overview · Access · Providers · Documents · Vehicles · History
+/app/inspections                List + new
+/app/inspections/$id            Detailed report + PDF export
+/app/maintenance                Kanban by status
+/app/maintenance/$id            Ticket detail w/ owner approval + comments
+/app/arrivals                   Arrival/departure checklists per stay
+/app/vendors                    Vendor directory
+/app/vehicles                   Fleet list w/ reminders
+/app/expenses                   Ledger + monthly summary
+/app/calendar                   Unified calendar (extended from existing)
+/app/reports                    Report generator (PDF)
+/app/guests                     Existing concierge (kept)
+/app/settings                   Properties tags, role management
+
+/owner                          Owner dashboard
+/owner/properties/$id           Read-only property view
+/owner/reports                  Inspection + expense reports
+/owner/approvals                Pending maintenance approvals
+/owner/messages                 Messages
 ```
 
-Sidebar (desktop) + collapsible top nav (mobile) with icons: Dashboard, Guests, Calendar, Settings. Sidebar uses shadcn `Sidebar` so it can collapse.
+## 4. Key features
 
-## 4. Pages
+- **KPI dashboard cards** with sparkline trends.
+- **PDF reports** via browser print + dedicated print stylesheet (already scaffolded for guests) — extended to inspections, monthly owner statements, maintenance history.
+- **File uploads** via Supabase Storage buckets: `property-photos`, `inspection-photos`, `documents`, `invoices`.
+- **Owner approval workflow** — maintenance ticket > cost threshold triggers `Waiting Owner Approval`; owner approves/rejects from portal; notifies manager.
+- **Reminders** — derived client-side: vehicle insurance/registration expiring in <30 days, inspection overdue, document expirations.
+- **Activity feed** per property — union of inspections, maintenance, expenses, arrivals.
 
-### Dashboard (`/app`)
-- Top global search bar (guest name or activity name).
-- 4 stat tiles: Active guests today, Upcoming check-ins (next 7 days), Pending confirmations, Today's confirmed activities.
-- Two columns: "Today's schedule" list + "Pending requests" list (one-click confirm/cancel).
+## 5. Visual design
 
-### Guests (`/app/guests`)
-- Filterable list (search, tag chip filter).
-- "New guest" dialog with all new fields and tag multi-select.
+Keep current Playfair Display + Inter, navy/sand/gold palette. Add:
+- Soft shadow scale (`shadow-elegant-sm/md/lg`) tokens in `styles.css`.
+- Recharts for finance/expense charts (line + donut), styled with theme tokens.
+- Status pill system extended (Open/Scheduled/In Progress/Completed/Waiting Approval).
+- Timeline component for property history & activity feed.
+- Empty states with line-art illustrations.
 
-### Guest detail (`/app/guests/:id`)
-- Tabs: Overview · Preferences · Itinerary · History.
-  - **Overview**: contact, property, stay dates, party size, tag badges.
-  - **Preferences**: dietary, room, favorites, allergies, language, VIP notes, special notes — inline-editable.
-  - **Itinerary**: timeline grouped by day; add/edit/delete activity cards; status toggle; Print/PDF button (browser print with print-only stylesheet).
-  - **History**: past activities (date < today) and previous stays.
+## 6. Phased delivery
 
-### Calendar (`/app/calendar`)
-- Month and week views (custom grid; reuse existing day-grid logic).
-- Color-coded by status (gold = Requested, green = Confirmed, red = Cancelled).
-- Filter bar: guest, property, status, category.
-- Click event → side panel (Sheet) with full detail + status toggle + link to guest.
-- "Add activity" button → dialog with guest dropdown so items can be created from anywhere.
+Given the scope, I'll ship in 4 phases. Each phase ends with a working app.
 
-### Settings (`/app/settings`)
-- Manage property list (used in the guest "property" select).
-- Tag legend.
+**Phase 1 — Foundation (this turn)**
+- Auth (email/password + Google) + roles table + role-based routing.
+- Schema migration for all new tables + RLS + storage buckets.
+- New sidebar with role-aware nav.
+- Properties module (full): list, detail tabs, all access/provider/document data.
+- Vendors module.
+- Dashboard KPIs (real data where available, zero-states otherwise).
 
-## 5. Shared components
+**Phase 2**
+- Inspections (form + report + PDF) + findings.
+- Maintenance tickets (kanban + detail + owner approval flow).
+- File upload integration across both.
 
-- `StatusBadge` — clickable, cycles Requested → Confirmed → Cancelled; instant optimistic update via TanStack Query mutation.
-- `ActivityCard` — used in itinerary timeline and dashboard lists.
-- `ActivityDialog` — create/edit; reused from itinerary tab, calendar, and global "Add Activity".
-- `GuestTagPill` — colored per tag.
+**Phase 3**
+- Arrival/Departure checklists.
+- Vehicles.
+- Expenses + monthly summaries + charts.
+- Unified calendar (extends existing).
 
-## 6. Implementation order
-
-1. Migration (schema changes).
-2. Tokens + fonts + sidebar shell + rebrand.
-3. Guest list + guest dialog (with new fields) + guest detail tabs.
-4. Activity model: dialog, card, status badge, itinerary timeline tab.
-5. Dashboard (depends on activities + guests).
-6. Global calendar with filters and side panel.
-7. Settings (properties).
-8. Print/PDF layout polish.
+**Phase 4**
+- Owner portal (separate `/owner` layout) with scoped RLS.
+- Reports module (multi-report PDF export).
+- Messages.
+- Sample seed data for demo.
 
 ## Technical notes (skip if non-technical)
 
-- Keep TanStack Start routing; all data via `supabase` client (RLS open).
-- Use TanStack Query for caching + invalidation on mutations.
-- No auth scaffolding remains; `_authenticated` folder kept only as a structural layout to preserve routes; rename optional later.
-- PDF = browser-native print with `@media print` stylesheet (already partially scaffolded).
+- Roles: standard `app_role` enum + `user_roles` table + `has_role(uuid, app_role)` security-definer function. No role on profiles.
+- RLS for owner scope: `EXISTS (SELECT 1 FROM properties WHERE id = <tbl>.property_id AND owner_user_id = auth.uid())`.
+- Storage policies scoped by `(storage.foldername(name))[1] = property_id::text`; managers full; owners read-only on their property folders.
+- PDF = browser-native print + `@media print` stylesheet (cheap, no server runtime).
+- Calendar stays client-aggregated; no new table needed.
+- Charts: add `recharts` (already common in shadcn ecosystem).
+- Sample data: a single SQL seed inserted via `supabase--insert` after schema lands, gated on empty tables.
+
+---
+
+This is roughly 4 phases of work. I'd like to start Phase 1 now (auth + schema + properties + vendors + dashboard shell). **Reply "go" to proceed with Phase 1**, or tell me to re-scope (e.g. skip auth/owner portal for an MVP, change role model, etc.).
