@@ -139,7 +139,7 @@ export function ActivityDialog({
       } else {
         // guest_id is non-null in schema; for internal requests without a guest, require one
         if (!payload.guest_id) throw new Error("Please pick a guest (or add one first)");
-        const { error } = await supabase.from("activities").insert(payload as never);
+        const { error } = await supabase.from("activities").insert({ ...payload, details: payload.details as never });
         if (error) throw new Error(error.message);
       }
     },
