@@ -114,3 +114,88 @@ export const DOCUMENT_TYPES = [
   "Insurance Policy", "HOA Document", "Warranty", "Floor Plan", "Other",
 ] as const;
 
+// ── Concierge service types ───────────────────────────────────────
+export const SERVICE_TYPES = [
+  "Arrival Transportation",
+  "Departure Transportation",
+  "Private Transportation",
+  "Restaurant Reservation",
+  "Activity",
+  "Spa",
+  "Private Chef",
+  "Grocery",
+  "Other",
+] as const;
+export type ServiceType = (typeof SERVICE_TYPES)[number];
+
+export function serviceCategory(s: ServiceType | string): string {
+  if (typeof s === "string" && s.includes("Transportation")) return "Transportation";
+  if (s === "Restaurant Reservation") return "Dining";
+  if (s === "Activity") return "Excursion";
+  if (s === "Spa") return "Spa";
+  if (s === "Private Chef") return "Private Chef";
+  if (s === "Grocery") return "Grocery";
+  return "Other";
+}
+
+export const CAR_TYPES = [
+  "Luxury SUV", "Luxury Sprinter", "SUV", "One way", "Owners",
+] as const;
+
+export const TRANSPORT_LOCATIONS = [
+  "Chileno Bay Resort and Residences",
+  "Chileno Bay Beach Club",
+  "Esperanza",
+  "El Dorado Golf Club",
+  "The Resort at Pedregal",
+  "San Jose International Airport",
+  "San Jose Private Airport MMSD",
+  "Cabo San Lucas Private Airport MMSL",
+  "Cabo San Lucas Airport Terminal 1 - JSX",
+  "Las Ventanas",
+  "One and Only Palmilla",
+  "Hacienda Beach Club & Residences",
+  "Le Blanc",
+  "Thompson Hotel",
+  "Montage Hotel",
+  "Mar de Cortez",
+  "Dreams Resort",
+  "Secrets Puerto Los Cabos",
+  "Grand Velas",
+  "Viceroy",
+  "Other",
+] as const;
+
+export const CHARGE_TYPES = [
+  "A&G (Gerencia)", "Complimentary", "Food & Beverage",
+  "Golf Tournament Package", "Hotel Package", "Master account",
+  "Owner House Account", "Room bill", "Rooms Division",
+  "Sales and Marketing", "SPA",
+] as const;
+
+export const TRANSPORTATION_MODES = [
+  "Own Vehicle", "Taxi", "Private Transportation", "Walking",
+  "Carpool", "Shuttle", "Not needed", "TBA",
+] as const;
+
+export const ACTIVITY_TYPES = [
+  "ATVs / Quads", "Camel Safari", "City tour", "Deep sea fishing",
+  "Dolphin Encounter", "Dolphin Swim", "Desert Oasis Hike",
+  "Electric Bike tour", "Fishing", "Flyboard", "Glass Bottom Boat",
+  "Hike & SUP", "Horseback Ride", "Jeep tour", "Jet Ski",
+  "Kayak & Snorkeling", "Paddle to The Arch", "Parasailing",
+  "Pelagic Safari", "Private Boat", "Park Pass", "RZR / UTV",
+  "Sailing", "Scuba Diving", "Snorkeling cruise", "Spearfishing",
+  "Stand Up Paddle", "Sunset cruise", "Surfing lesson",
+  "Tennis Lesson", "Whale Watching", "Private Yacht", "Zip lines",
+] as const;
+
+export const PAYMENT_METHODS = [
+  "Amex, VS, MC & Cash accepted",
+  "VS, MC and Cash accepted only",
+  "Cash accepted only",
+  "Already Paid",
+  "Pay at venue",
+] as const;
+
+
