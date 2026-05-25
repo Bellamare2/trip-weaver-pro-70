@@ -113,7 +113,7 @@ export function ActivityDialog({
       if (!draft.guest_id && !draft.is_internal) throw new Error("Please pick a guest");
       if (!draft.name.trim()) throw new Error("Activity name / title is required");
       const payload = {
-        guest_id: draft.guest_id || null,
+        guest_id: draft.guest_id,
         service_type: draft.service_type,
         category: serviceCategory(draft.service_type),
         name: draft.name.trim(),
@@ -131,15 +131,16 @@ export function ActivityDialog({
         status: draft.status,
         roll_over: draft.roll_over,
         is_internal: draft.is_internal,
-        details: draft.details ?? {},
+        details: (draft.details ?? {}) as never,
       };
       if (isEdit && initial?.id) {
         const { error } = await supabase.from("activities").update(payload).eq("id", initial.id);
         if (error) throw new Error(error.message);
       } else {
-        // guest_id is non-null in schema; for internal requests without a guest, require one
         if (!payload.guest_id) throw new Error("Please pick a guest (or add one first)");
-        const { error } = await supabase.from("activities").insert({ ...payload, details: payload.details as never });
+        const { error } = await supabase.from("activities").insert(payload);
+        if (error) throw new Error(error.message);
+      }
         if (error) throw new Error(error.message);
       }
     },
