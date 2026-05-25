@@ -141,8 +141,7 @@ export function ActivityDialog({
         const { error } = await supabase.from("activities").insert(payload);
         if (error) throw new Error(error.message);
       }
-        if (error) throw new Error(error.message);
-      }
+
     },
     onSuccess: () => {
       toast.success(isEdit ? "Saved" : "Added");
