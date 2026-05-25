@@ -1,39 +1,47 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, parseISO,
   startOfMonth, startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ActivityDialog } from "@/components/activity-dialog";
-import { ActivityCard, type ActivityRow } from "@/components/activity-card";
-import { CATEGORIES, STATUSES, statusDot, type ActivityStatus } from "@/lib/domain";
+import { DayActivitiesPanel } from "@/components/day-activities-panel";
+import { CATEGORIES, STATUSES, statusDot, SERVICE_TYPES } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/app/calendar")({
   component: CalendarPage,
 });
 
-interface CalActivity extends ActivityRow {
+interface CalActivity {
+  id: string;
+  guest_id: string;
+  name: string;
+  category: string;
+  service_type: string | null;
+  date: string;
+  start_time: string | null;
+  status: "Requested" | "Confirmed" | "Cancelled";
   guests: { full_name: string; property: string | null } | null;
 }
 
 function CalendarPage() {
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState<Date>(new Date());
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<CalActivity | null>(null);
+  const [guestRequestOpen, setGuestRequestOpen] = useState(false);
+  const [internalRequestOpen, setInternalRequestOpen] = useState(false);
+  const [activeDay, setActiveDay] = useState<string | null>(null);
 
   const [fGuest, setFGuest] = useState<string>("all");
   const [fProperty, setFProperty] = useState<string>("all");
   const [fStatus, setFStatus] = useState<string>("all");
-  const [fCategory, setFCategory] = useState<string>("all");
+  const [fService, setFService] = useState<string>("all");
 
   const range = useMemo(() => {
     if (view === "month") {
@@ -51,7 +59,7 @@ function CalendarPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*, guests(full_name, property)")
+        .select("id, guest_id, name, category, service_type, date, start_time, status, guests(full_name, property)")
         .gte("date", format(range.start, "yyyy-MM-dd"))
         .lte("date", format(range.end, "yyyy-MM-dd"))
         .order("start_time", { ascending: true, nullsFirst: false });
@@ -82,7 +90,7 @@ function CalendarPage() {
     if (fGuest !== "all" && a.guest_id !== fGuest) return false;
     if (fProperty !== "all" && a.guests?.property !== fProperty) return false;
     if (fStatus !== "all" && a.status !== fStatus) return false;
-    if (fCategory !== "all" && a.category !== fCategory) return false;
+    if (fService !== "all" && a.service_type !== fService && a.category !== fService) return false;
     return true;
   });
 
@@ -100,7 +108,13 @@ function CalendarPage() {
             {view === "month" ? format(cursor, "MMMM yyyy") : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setGuestRequestOpen(true)} className="border-gold/50 text-primary hover:bg-gold/10">
+            <Sparkles className="mr-1.5 h-4 w-4 text-gold" /> Guest Request
+          </Button>
+          <Button variant="outline" onClick={() => setInternalRequestOpen(true)}>
+            <ClipboardList className="mr-1.5 h-4 w-4" /> Internal Request
+          </Button>
           <div className="flex rounded-md border border-border p-0.5">
             <button onClick={() => setView("month")} className={`px-3 py-1 text-xs ${view === "month" ? "bg-primary text-primary-foreground rounded" : "text-muted-foreground"}`}>Month</button>
             <button onClick={() => setView("week")} className={`px-3 py-1 text-xs ${view === "week" ? "bg-primary text-primary-foreground rounded" : "text-muted-foreground"}`}>Week</button>
@@ -110,7 +124,6 @@ function CalendarPage() {
             <button onClick={() => setCursor(new Date())} className="border-y border-border px-3 py-1.5 text-xs">Today</button>
             <button onClick={stepFwd} className="rounded-r-md border border-border p-1.5 hover:bg-accent"><ChevronRight className="h-4 w-4" /></button>
           </div>
-          <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Activity</Button>
         </div>
       </div>
 
@@ -122,11 +135,11 @@ function CalendarPage() {
           options={[{ value: "all", label: "All properties" }, ...(properties ?? []).map((p) => ({ value: p.name, label: p.name }))]} />
         <FilterSelect label="Status" value={fStatus} onValueChange={setFStatus}
           options={[{ value: "all", label: "All statuses" }, ...STATUSES.map((s) => ({ value: s, label: s }))]} />
-        <FilterSelect label="Category" value={fCategory} onValueChange={setFCategory}
-          options={[{ value: "all", label: "All categories" }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]} />
+        <FilterSelect label="Service" value={fService} onValueChange={setFService}
+          options={[{ value: "all", label: "All services" }, ...SERVICE_TYPES.map((s) => ({ value: s, label: s })), ...CATEGORIES.map((c) => ({ value: c, label: c }))]} />
       </div>
 
-      {/* Grid */}
+      {/* Calendar grid */}
       <div className="mt-4 overflow-hidden rounded-lg border border-border bg-card">
         <div className="grid grid-cols-7 border-b border-border bg-muted/40">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
@@ -138,60 +151,56 @@ function CalendarPage() {
             const inMonth = view === "week" || isSameMonth(d, cursor);
             const dayEvents = eventsByDay(d);
             const isToday = isSameDay(d, new Date());
+            const iso = format(d, "yyyy-MM-dd");
             return (
-              <div
+              <button
                 key={d.toISOString()}
-                className={`min-h-[110px] border-b border-r border-border p-1.5 last:border-r-0 ${inMonth ? "bg-card" : "bg-muted/30"}`}
+                onClick={() => setActiveDay(iso)}
+                className={`group min-h-[110px] border-b border-r border-border p-1.5 text-left last:border-r-0 hover:bg-accent/40 ${inMonth ? "bg-card" : "bg-muted/30"}`}
               >
-                <div className={`mb-1 flex items-center justify-between text-xs ${inMonth ? "text-primary" : "text-muted-foreground"}`}>
-                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""}`}>
+                <div className={`mb-1 flex flex-col items-center gap-0.5 ${inMonth ? "text-primary" : "text-muted-foreground"}`}>
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""}`}>
                     {format(d, "d")}
                   </span>
+                  {/* Red dot only if events exist */}
+                  {dayEvents.length > 0 && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-label={`${dayEvents.length} events`} />
+                  )}
                 </div>
                 <div className="space-y-1">
-                  {dayEvents.slice(0, 4).map((a) => (
-                    <button
-                      key={a.id} onClick={() => setSelected(a)}
-                      className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10px] hover:bg-accent"
+                  {dayEvents.slice(0, 3).map((a) => (
+                    <div
+                      key={a.id}
+                      className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10px]"
                       title={`${a.name} · ${a.guests?.full_name ?? ""}`}
                     >
                       <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${statusDot[a.status]}`} />
                       <span className="text-primary">{a.start_time ? a.start_time.slice(0, 5) + " " : ""}{a.name}</span>
-                    </button>
+                    </div>
                   ))}
-                  {dayEvents.length > 4 && (
-                    <p className="px-1.5 text-[10px] text-muted-foreground">+{dayEvents.length - 4} more</p>
+                  {dayEvents.length > 3 && (
+                    <p className="px-1.5 text-[10px] text-muted-foreground">+{dayEvents.length - 3} more</p>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      <ActivityDialog open={open} onOpenChange={setOpen} defaultDate={format(cursor, "yyyy-MM-dd")} />
+      <p className="mt-3 text-xs text-muted-foreground">
+        <Plus className="mr-1 inline h-3 w-3" />
+        Click any day to view & edit the timeline. Red dot indicates planned activities.
+      </p>
 
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-[400px] sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle className="font-display text-2xl">Activity</SheetTitle>
-          </SheetHeader>
-          {selected && (
-            <div className="mt-4 space-y-4">
-              <ActivityCard activity={selected} guestLabel={selected.guests?.full_name ?? undefined} />
-              {selected.guests && (
-                <Link
-                  to="/app/guests/$guestId" params={{ guestId: selected.guest_id }}
-                  onClick={() => setSelected(null)}
-                  className="block text-sm text-gold hover:underline"
-                >
-                  Open guest profile →
-                </Link>
-              )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={format(cursor, "yyyy-MM-dd")} />
+      <ActivityDialog open={internalRequestOpen} onOpenChange={setInternalRequestOpen} defaultDate={format(cursor, "yyyy-MM-dd")} defaultInternal />
+
+      <DayActivitiesPanel
+        date={activeDay}
+        open={!!activeDay}
+        onOpenChange={(o) => !o && setActiveDay(null)}
+      />
     </div>
   );
 }
@@ -211,6 +220,3 @@ function FilterSelect({
     </div>
   );
 }
-
-// silence unused import lints
-void ({} as ActivityStatus);

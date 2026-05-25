@@ -16,51 +16,75 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          assigned_to: string | null
           category: string
           confirmation_number: string | null
+          confirmed_with: string | null
           created_at: string
           date: string
+          details: Json
           duration_minutes: number | null
           guest_id: string
           id: string
+          internal_notes: string | null
+          is_internal: boolean
           location: string | null
           name: string
           notes: string | null
           price_usd: number | null
+          repeat_pattern: string | null
+          roll_over: boolean
+          service_type: string
           start_time: string | null
           status: string
           updated_at: string
           vendor: string | null
         }
         Insert: {
+          assigned_to?: string | null
           category?: string
           confirmation_number?: string | null
+          confirmed_with?: string | null
           created_at?: string
           date: string
+          details?: Json
           duration_minutes?: number | null
           guest_id: string
           id?: string
+          internal_notes?: string | null
+          is_internal?: boolean
           location?: string | null
           name: string
           notes?: string | null
           price_usd?: number | null
+          repeat_pattern?: string | null
+          roll_over?: boolean
+          service_type?: string
           start_time?: string | null
           status?: string
           updated_at?: string
           vendor?: string | null
         }
         Update: {
+          assigned_to?: string | null
           category?: string
           confirmation_number?: string | null
+          confirmed_with?: string | null
           created_at?: string
           date?: string
+          details?: Json
           duration_minutes?: number | null
           guest_id?: string
           id?: string
+          internal_notes?: string | null
+          is_internal?: boolean
           location?: string | null
           name?: string
           notes?: string | null
           price_usd?: number | null
+          repeat_pattern?: string | null
+          roll_over?: boolean
+          service_type?: string
           start_time?: string | null
           status?: string
           updated_at?: string
