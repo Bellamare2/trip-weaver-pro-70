@@ -5,6 +5,7 @@ import {
   Home, Wrench, ClipboardCheck, Receipt, Car, Briefcase, FileText,
   CheckSquare,
 } from "lucide-react";
+import logoNavy from "@/assets/bellamare-logo-navy.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AppLayout,
