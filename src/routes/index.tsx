@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import logo from "@/assets/bellamare-logo.jpg";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -8,8 +9,8 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-sm bg-primary" />
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="Bellamare" className="h-10 w-10 rounded-md object-cover" />
           <span className="font-display text-xl font-semibold text-primary">Bellamare</span>
         </div>
         <Link
@@ -22,6 +23,7 @@ function Landing() {
 
       <main className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-3xl">
+          <img src={logo} alt="" className="mb-8 h-24 w-24 rounded-lg object-cover shadow-elegant" />
           <span className="inline-block text-xs uppercase tracking-[0.25em] text-gold">
             Los Cabos · Concierge
           </span>

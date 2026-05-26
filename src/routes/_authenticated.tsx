@@ -5,6 +5,7 @@ import {
   Home, Wrench, ClipboardCheck, Receipt, Car, Briefcase, FileText,
   CheckSquare,
 } from "lucide-react";
+import logoNavy from "@/assets/bellamare-logo-navy.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AppLayout,
@@ -59,7 +60,7 @@ function AppLayout() {
       {/* Mobile top bar */}
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border/40 bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
         <Link to="/app" className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-sm bg-gold" />
+          <img src={logoNavy} alt="Bellamare" className="h-8 w-8 rounded-sm object-cover ring-1 ring-gold/40" />
           <span className="font-display text-base tracking-wide">Bellamare</span>
         </Link>
         <button
@@ -98,8 +99,8 @@ function AppLayout() {
       )}
 
       <aside className="no-print hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
-        <Link to="/app" className="flex items-center gap-2.5 px-6 py-6">
-          <div className="h-8 w-8 rounded-sm bg-gold" />
+        <Link to="/app" className="flex items-center gap-3 px-6 py-6">
+          <img src={logoNavy} alt="Bellamare" className="h-11 w-11 rounded-md object-cover ring-1 ring-gold/40 shadow-elegant" />
           <div className="leading-tight">
             <p className="font-display text-lg tracking-wide">Bellamare</p>
             <p className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/50">Property OS</p>
