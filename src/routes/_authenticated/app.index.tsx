@@ -169,36 +169,131 @@ function Dashboard() {
         <StatTile label="Today · confirmed" value={todayConfirmed.length} icon={CalendarCheck} />
       </div>
 
-      {/* Two-column lists */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section>
-          <h2 className="font-display text-xl text-primary">Today's schedule</h2>
-          <div className="mt-3 space-y-3">
-            {todayConfirmed.length === 0 && (
-              <p className="rounded-md border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-                Nothing confirmed for today.
-              </p>
-            )}
-            {todayConfirmed.map((a) => (
-              <ActivityCard key={a.id} activity={a} guestLabel={a.guests?.full_name ?? undefined} />
-            ))}
+      {/* Calendar + day timeline */}
+      <section className="mt-8 grid gap-6 lg:grid-cols-[340px_1fr]">
+        {/* Mini calendar */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-display text-lg text-primary">{format(cursor, "MMMM yyyy")}</p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setCursor(addMonths(cursor, -1))} className="rounded p-1 hover:bg-accent"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => { setCursor(today); setSelectedDay(today); }} className="rounded px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:bg-accent">Today</button>
+              <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded p-1 hover:bg-accent"><ChevronRight className="h-4 w-4" /></button>
+            </div>
           </div>
-        </section>
+          <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+            {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-y-1">
+            {monthDays.map((d) => {
+              const iso = format(d, "yyyy-MM-dd");
+              const inMonth = isSameMonth(d, cursor);
+              const isSel = isSameDay(d, selectedDay);
+              const isToday = isSameDay(d, today);
+              const has = eventDays.has(iso);
+              return (
+                <button
+                  key={iso}
+                  onClick={() => setSelectedDay(d)}
+                  className={`flex h-9 flex-col items-center justify-center rounded text-xs ${
+                    isSel ? "bg-primary text-primary-foreground" :
+                    isToday ? "bg-gold/20 text-primary" :
+                    inMonth ? "text-primary hover:bg-accent" : "text-muted-foreground/50 hover:bg-accent/40"
+                  }`}
+                >
+                  <span className="leading-none">{format(d, "d")}</span>
+                  <span className={`mt-0.5 h-1 w-1 rounded-full ${has ? "bg-destructive" : "bg-transparent"}`} />
+                </button>
+              );
+            })}
+          </div>
 
-        <section>
-          <h2 className="font-display text-xl text-primary">Pending requests</h2>
-          <div className="mt-3 space-y-3">
-            {pending.length === 0 && (
-              <p className="rounded-md border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-                All caught up.
-              </p>
-            )}
-            {pending.slice(0, 8).map((a) => (
-              <ActivityCard key={a.id} activity={a} guestLabel={a.guests?.full_name ?? undefined} />
-            ))}
+          <div className="mt-4 flex flex-col gap-2">
+            <Button variant="outline" size="sm" onClick={() => setGuestRequestOpen(true)} className="justify-start border-gold/50 text-primary hover:bg-gold/10">
+              <Sparkles className="mr-1.5 h-4 w-4 text-gold" /> Guest Request
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setInternalRequestOpen(true)} className="justify-start">
+              <ClipboardList className="mr-1.5 h-4 w-4" /> Internal Request
+            </Button>
           </div>
-        </section>
-      </div>
+        </div>
+
+        {/* Day timeline */}
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-gold">Day schedule</p>
+              <h2 className="font-display text-xl text-primary">{format(selectedDay, "EEEE, MMMM d")}</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {selectedDayActivities.length} item{selectedDayActivities.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="max-h-[520px] overflow-y-auto p-3">
+            {selectedDayActivities.length === 0 ? (
+              <div className="rounded border border-dashed border-border bg-muted/20 py-12 text-center">
+                <Clock className="mx-auto h-6 w-6 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">No activities planned</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {selectedDayActivities.map((a) => {
+                  const t = a.start_time
+                    ? (() => { const [h,m] = a.start_time!.split(":"); const d = new Date(); d.setHours(+h, +m); return format(d, "h:mm a"); })()
+                    : "All day";
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setEditing(a as unknown as ActivityDraft)}
+                      className="block w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-gold/60"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-16 shrink-0">
+                          <p className="font-display text-base leading-tight text-primary">{t}</p>
+                          {a.duration_minutes ? <p className="text-[10px] text-muted-foreground">{a.duration_minutes}m</p> : null}
+                        </div>
+                        <div className="flex-1 border-l border-gold/30 pl-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className={`text-[10px] uppercase tracking-widest ${categoryAccent[a.category] ?? "text-muted-foreground"}`}>
+                                {a.service_type ?? a.category}
+                              </p>
+                              <p className="font-display text-base leading-tight text-primary">{a.name}</p>
+                              {a.guests && (
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {a.guests.full_name}{a.guests.property ? ` · ${a.guests.property}` : ""}
+                                </p>
+                              )}
+                              {a.vendor && <p className="mt-0.5 text-xs text-foreground/70">{a.vendor}</p>}
+                            </div>
+                            <StatusBadge status={a.status} activityId={a.id} size="sm" />
+                          </div>
+                          {a.location && <p className="mt-1 text-xs text-muted-foreground">{a.location}</p>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Pending requests */}
+      <section className="mt-8">
+        <h2 className="font-display text-xl text-primary">Pending requests</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {pending.length === 0 && (
+            <p className="rounded-md border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground md:col-span-2">
+              All caught up.
+            </p>
+          )}
+          {pending.slice(0, 8).map((a) => (
+            <ActivityCard key={a.id} activity={a} guestLabel={a.guests?.full_name ?? undefined} />
+          ))}
+        </div>
+      </section>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
         <section>
