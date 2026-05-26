@@ -90,13 +90,23 @@ function Dashboard() {
     (a) => a.status === "Confirmed" && isSameDay(parseISO(a.date), today),
   );
 
-  const search = q.trim().toLowerCase();
-  const guestHits = search
-    ? (guests ?? []).filter((g) => g.full_name.toLowerCase().includes(search)).slice(0, 5)
-    : [];
-  const activityHits = search
-    ? (activities ?? []).filter((a) => a.name.toLowerCase().includes(search)).slice(0, 5)
-    : [];
+  // Calendar day-with-events set for visible month
+  const monthDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 0 });
+    return eachDayOfInterval({ start, end });
+  }, [cursor]);
+  const eventDays = useMemo(() => {
+    const s = new Set<string>();
+    (activities ?? []).forEach((a) => s.add(a.date));
+    return s;
+  }, [activities]);
+  const selectedDayActivities = useMemo(
+    () => (activities ?? [])
+      .filter((a) => a.date === selectedIso)
+      .sort((a, b) => (a.start_time ?? "99").localeCompare(b.start_time ?? "99")),
+    [activities, selectedIso],
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
