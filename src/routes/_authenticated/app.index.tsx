@@ -32,6 +32,7 @@ interface DashGuest {
 }
 
 interface DashActivity extends ActivityRow {
+  service_type?: string | null;
   guests: { full_name: string; property: string | null } | null;
 }
 
