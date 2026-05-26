@@ -23,6 +23,7 @@ function Landing() {
 
       <main className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-3xl">
+          <img src={logo} alt="" className="mb-8 h-24 w-24 rounded-lg object-cover shadow-elegant" />
           <span className="inline-block text-xs uppercase tracking-[0.25em] text-gold">
             Los Cabos · Concierge
           </span>
