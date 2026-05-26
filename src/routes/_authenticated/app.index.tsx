@@ -38,10 +38,16 @@ interface DashActivity extends ActivityRow {
 function Dashboard() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [guestRequestOpen, setGuestRequestOpen] = useState(false);
+  const [internalRequestOpen, setInternalRequestOpen] = useState(false);
+  const [editing, setEditing] = useState<(Partial<ActivityDraft> & { id?: string }) | null>(null);
 
   const today = startOfDay(new Date());
   const todayIso = format(today, "yyyy-MM-dd");
   const inSevenDays = format(addDays(today, 7), "yyyy-MM-dd");
+  const [cursor, setCursor] = useState<Date>(today);
+  const [selectedDay, setSelectedDay] = useState<Date>(today);
+  const selectedIso = format(selectedDay, "yyyy-MM-dd");
 
   const { data: guests } = useQuery({
     queryKey: ["dashboard", "guests"],
