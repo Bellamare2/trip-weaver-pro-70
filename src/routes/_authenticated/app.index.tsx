@@ -108,6 +108,15 @@ function Dashboard() {
     [activities, selectedIso],
   );
 
+  const search = q.trim().toLowerCase();
+  const guestHits = search
+    ? (guests ?? []).filter((g) => g.full_name.toLowerCase().includes(search)).slice(0, 5)
+    : [];
+  const activityHits = search
+    ? (activities ?? []).filter((a) => a.name.toLowerCase().includes(search)).slice(0, 5)
+    : [];
+
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
