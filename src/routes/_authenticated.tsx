@@ -60,7 +60,7 @@ function AppLayout() {
       {/* Mobile top bar */}
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border/40 bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
         <Link to="/app" className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-sm bg-gold" />
+          <img src={logoNavy} alt="Bellamare" className="h-8 w-8 rounded-sm object-cover ring-1 ring-gold/40" />
           <span className="font-display text-base tracking-wide">Bellamare</span>
         </Link>
         <button
