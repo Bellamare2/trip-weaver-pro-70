@@ -351,6 +351,9 @@ function Dashboard() {
       </div>
 
       <ActivityDialog open={open} onOpenChange={setOpen} defaultDate={todayIso} />
+      <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={selectedIso} />
+      <ActivityDialog open={internalRequestOpen} onOpenChange={setInternalRequestOpen} defaultDate={selectedIso} defaultInternal />
+      <ActivityDialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} initial={editing ?? undefined} />
       <p className="sr-only">{inSevenDays}</p>
     </div>
   );
