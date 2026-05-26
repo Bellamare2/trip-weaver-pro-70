@@ -1,15 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, addDays, isSameDay, startOfDay } from "date-fns";
-import { Plus, Search, CalendarCheck, Clock, Users, BedDouble } from "lucide-react";
+import {
+  format, parseISO, addDays, addMonths, isSameDay, isSameMonth, startOfDay,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
+} from "date-fns";
+import {
+  Plus, Search, CalendarCheck, Clock, Users, BedDouble,
+  ChevronLeft, ChevronRight, Sparkles, ClipboardList,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ActivityCard, type ActivityRow } from "@/components/activity-card";
 import { GuestTagPill } from "@/components/guest-tag-pill";
-import { ActivityDialog } from "@/components/activity-dialog";
-import type { GuestTag } from "@/lib/domain";
+import { ActivityDialog, type ActivityDraft } from "@/components/activity-dialog";
+import { StatusBadge } from "@/components/status-badge";
+import { categoryAccent, type GuestTag } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
