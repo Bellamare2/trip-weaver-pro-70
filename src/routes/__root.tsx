@@ -54,8 +54,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bellamare Concierge — Los Cabos" },
+      { title: "Trip Inn By Bellamare" },
       { name: "description", content: "Luxury property concierge management for Los Cabos residences." },
+      { property: "og:title", content: "Trip Inn By Bellamare" },
+      { name: "twitter:title", content: "Trip Inn By Bellamare" },
+      { property: "og:description", content: "Luxury property concierge management for Los Cabos residences." },
+      { name: "twitter:description", content: "Luxury property concierge management for Los Cabos residences." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/21e17cbb-34b4-4241-bd1c-cc9cf63734bd" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/21e17cbb-34b4-4241-bd1c-cc9cf63734bd" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
