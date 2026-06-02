@@ -19,6 +19,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // If already logged in, go straight to the app
   useEffect(() => {
@@ -37,6 +38,15 @@ function LoginPage() {
       if (mode === "sign_in") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // "Stay signed in" stores a persistent marker so the route guard knows
+        // to keep the session across browser restarts.
+        // Without it, closing the browser will force a new login next time.
+        if (rememberMe) {
+          localStorage.setItem("bellamare-remember-me", "1");
+        } else {
+          localStorage.removeItem("bellamare-remember-me");
+          sessionStorage.setItem("bellamare-session-active", "1");
+        }
         navigate({ to: "/app" });
       } else {
         const { error } = await supabase.auth.signUp({
@@ -137,6 +147,18 @@ function LoginPage() {
                 autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
               />
             </div>
+
+            {mode === "sign_in" && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+                Stay signed in until I log out
+              </label>
+            )}
 
             {error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">

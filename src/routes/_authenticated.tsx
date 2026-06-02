@@ -15,6 +15,16 @@ export const Route = createFileRoute("/_authenticated")({
     if (!session) {
       throw redirect({ to: "/login" });
     }
+    // If the user signed in without "Stay signed in", the session-active flag
+    // lives in sessionStorage (cleared when browser closes). If it's gone but
+    // the Supabase session still exists in localStorage, we sign them out so
+    // they must log in again — respecting their "don't remember me" choice.
+    const remembered = localStorage.getItem("bellamare-remember-me");
+    const sessionActive = sessionStorage.getItem("bellamare-session-active");
+    if (!remembered && !sessionActive) {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/login" });
+    }
   },
   component: AppLayout,
 });
@@ -68,6 +78,8 @@ function AppLayout() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    localStorage.removeItem("bellamare-remember-me");
+    sessionStorage.removeItem("bellamare-session-active");
     navigate({ to: "/login" });
   }
 
