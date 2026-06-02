@@ -171,6 +171,7 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
   const create = useMutation({
     mutationFn: async () => {
       if (!form.full_name.trim()) throw new Error("Full name is required");
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("guests").insert({
         full_name: form.full_name.trim(),
         nationality: form.nationality || null,
@@ -189,6 +190,7 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
         vip_notes: form.vip_notes || null,
         special_notes: form.special_notes || null,
         tags,
+        created_by: user?.id ?? null,
       });
       if (error) throw new Error(error.message);
     },

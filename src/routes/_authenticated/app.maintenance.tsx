@@ -126,6 +126,7 @@ function TicketDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
     mutationFn: async () => {
       if (!form.property_id) throw new Error("Property is required");
       if (!form.title.trim()) throw new Error("Title is required");
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("maintenance_tickets").insert({
         property_id: form.property_id, title: form.title.trim(),
         description: form.description || null,
@@ -134,6 +135,7 @@ function TicketDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
         cost_estimate: form.cost_estimate ? Number(form.cost_estimate) : null,
         owner_approval_status: form.owner_approval_status,
         status: form.owner_approval_status === "Pending" ? "Waiting Owner Approval" : "Open",
+        created_by: user?.id ?? null,
       });
       if (error) throw new Error(error.message);
     },

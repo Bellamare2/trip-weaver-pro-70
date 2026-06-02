@@ -1,13 +1,21 @@
-import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useLocation, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, Calendar, Settings, Menu, X,
   Home, Wrench, ClipboardCheck, Receipt, Car, Briefcase, FileText,
-  CheckSquare,
+  CheckSquare, LogOut,
 } from "lucide-react";
 import logoNavy from "@/assets/bellamare-logo-navy.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: AppLayout,
 });
 
@@ -51,9 +59,21 @@ const groups: NavGroup[] = [
 
 function AppLayout() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { user } = useCurrentUser();
+
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate({ to: "/login" });
+  }
+
+  const displayName = user?.user_metadata?.display_name
+    ?? user?.email?.split("@")[0]
+    ?? "—";
 
   return (
     <div className="flex min-h-screen flex-col bg-background md:flex-row">
@@ -95,6 +115,15 @@ function AppLayout() {
               })}
             </div>
           ))}
+          {/* Mobile logout */}
+          <div className="mt-3 border-t border-sidebar-border/40 pt-3">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
+          </div>
         </nav>
       )}
 
@@ -128,8 +157,22 @@ function AppLayout() {
             </div>
           ))}
         </nav>
-        <div className="border-t border-sidebar-border/60 px-6 py-4">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/50">Los Cabos · MX</p>
+
+        {/* User + logout */}
+        <div className="border-t border-sidebar-border/60 px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">{displayName}</p>
+              <p className="truncate text-[10px] text-sidebar-foreground/40">{user?.email ?? ""}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </aside>
 

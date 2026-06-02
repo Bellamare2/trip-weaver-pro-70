@@ -131,10 +131,12 @@ function ExpenseDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenC
     mutationFn: async () => {
       if (!form.property_id) throw new Error("Property required");
       if (!form.amount_usd) throw new Error("Amount required");
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("expenses").insert({
         property_id: form.property_id, vendor_id: form.vendor_id || null,
         category: form.category, amount_usd: Number(form.amount_usd),
         date: form.date, description: form.description || null,
+        created_by: user?.id ?? null,
       });
       if (error) throw new Error(error.message);
     },

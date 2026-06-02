@@ -138,7 +138,11 @@ export function ActivityDialog({
         if (error) throw new Error(error.message);
       } else {
         if (!payload.guest_id) throw new Error("Please pick a guest (or add one first)");
-        const { error } = await supabase.from("activities").insert(payload);
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error } = await supabase.from("activities").insert({
+          ...payload,
+          created_by: user?.id ?? null,
+        });
         if (error) throw new Error(error.message);
       }
 

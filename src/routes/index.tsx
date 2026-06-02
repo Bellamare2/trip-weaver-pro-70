@@ -14,10 +14,10 @@ function Landing() {
           <span className="font-display text-xl font-semibold text-primary">Bellamare</span>
         </div>
         <Link
-          to="/app"
+          to="/login"
           className="rounded-md border border-primary/20 px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
         >
-          Open studio
+          Sign in
         </Link>
       </header>
 
@@ -38,7 +38,7 @@ function Landing() {
           </p>
           <div className="mt-10 flex gap-3">
             <Link
-              to="/app"
+              to="/login"
               className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-90 transition-opacity"
             >
               Enter the desk

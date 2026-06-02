@@ -139,8 +139,10 @@ function ChecklistDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpe
       if (!form.property_id) throw new Error("Property required");
       const defaults = form.type === "Arrival" ? ARRIVAL_CHECKLIST_DEFAULT : DEPARTURE_CHECKLIST_DEFAULT;
       const items = defaults.map((label) => ({ label, done: false }));
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("stay_checklists").insert({
         property_id: form.property_id, type: form.type, scheduled_date: form.scheduled_date, items,
+        created_by: user?.id ?? null,
       });
       if (error) throw new Error(error.message);
     },
