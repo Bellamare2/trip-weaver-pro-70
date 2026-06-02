@@ -53,7 +53,9 @@ export const tagStyles: Record<GuestTag, string> = {
 
 export function nextStatus(s: ActivityStatus): ActivityStatus {
   const i = STATUSES.indexOf(s);
-  return STATUSES[(i + 1) % STATUSES.length];
+  // Don't wrap past Cancelled — it's a terminal state
+  const next = i + 1;
+  return next < STATUSES.length ? STATUSES[next] : s;
 }
 
 // ── Property OS domain ────────────────────────────────────────────

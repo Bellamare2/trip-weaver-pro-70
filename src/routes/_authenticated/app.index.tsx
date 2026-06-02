@@ -43,7 +43,8 @@ function Dashboard() {
   const [internalRequestOpen, setInternalRequestOpen] = useState(false);
   const [editing, setEditing] = useState<(Partial<ActivityDraft> & { id?: string }) | null>(null);
 
-  const today = startOfDay(new Date());
+  // Stable reference — new Date() on every render would bust every useMemo below
+  const today = useMemo(() => startOfDay(new Date()), []);
   const todayIso = format(today, "yyyy-MM-dd");
   const inSevenDays = format(addDays(today, 7), "yyyy-MM-dd");
   const [cursor, setCursor] = useState<Date>(today);
@@ -82,7 +83,8 @@ function Dashboard() {
   );
   const upcomingCheckins = useMemo(
     () => (guests ?? []).filter((g) =>
-      g.check_in && parseISO(g.check_in) >= today && parseISO(g.check_in) <= addDays(today, 7))
+      // Use > today (not >=) so same-day arrivals don't appear in both sections
+      g.check_in && parseISO(g.check_in) > today && parseISO(g.check_in) <= addDays(today, 7))
       .sort((a, b) => (a.check_in! < b.check_in! ? -1 : 1)),
     [guests, today],
   );
