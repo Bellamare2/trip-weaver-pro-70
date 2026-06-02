@@ -12,16 +12,12 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"sign_in" | "sign_up">("sign_in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // If already logged in, go straight to the app
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/app" });
@@ -31,35 +27,17 @@ function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccessMsg(null);
     setLoading(true);
-
     try {
-      if (mode === "sign_in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        // "Stay signed in" stores a persistent marker so the route guard knows
-        // to keep the session across browser restarts.
-        // Without it, closing the browser will force a new login next time.
-        if (rememberMe) {
-          localStorage.setItem("bellamare-remember-me", "1");
-        } else {
-          localStorage.removeItem("bellamare-remember-me");
-          sessionStorage.setItem("bellamare-session-active", "1");
-        }
-        navigate({ to: "/app" });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (rememberMe) {
+        localStorage.setItem("bellamare-remember-me", "1");
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { display_name: displayName || email.split("@")[0] },
-          },
-        });
-        if (error) throw error;
-        setSuccessMsg("Account created! Check your email to confirm, then sign in.");
-        setMode("sign_in");
+        localStorage.removeItem("bellamare-remember-me");
+        sessionStorage.setItem("bellamare-session-active", "1");
       }
+      navigate({ to: "/app" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -99,29 +77,12 @@ function LoginPage() {
             <span className="font-display text-xl text-primary">Bellamare</span>
           </div>
 
-          <h2 className="font-display text-3xl text-primary">
-            {mode === "sign_in" ? "Welcome back" : "Create account"}
-          </h2>
+          <h2 className="font-display text-3xl text-primary">Welcome back</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "sign_in"
-              ? "Sign in to access the Bellamare desk."
-              : "Set up your Bellamare account."}
+            Sign in to access the Bellamare desk.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            {mode === "sign_up" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="displayName">Your name</Label>
-                <Input
-                  id="displayName"
-                  placeholder="e.g. Guillermo"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  autoComplete="name"
-                />
-              </div>
-            )}
-
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -144,66 +105,33 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
+                autoComplete="current-password"
               />
             </div>
 
-            {mode === "sign_in" && (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-border accent-primary"
-                />
-                Stay signed in until I log out
-              </label>
-            )}
+            <label className="flex items-center gap-2 text-sm text-muted-foreground select-none cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-border accent-primary"
+              />
+              Stay signed in until I log out
+            </label>
 
             {error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
               </p>
             )}
-            {successMsg && (
-              <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success-foreground">
-                {successMsg}
-              </p>
-            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? "Please wait…"
-                : mode === "sign_in"
-                ? "Sign in"
-                : "Create account"}
+              {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "sign_in" ? (
-              <>
-                No account yet?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setMode("sign_up"); setError(null); setSuccessMsg(null); }}
-                  className="text-primary underline-offset-2 hover:underline"
-                >
-                  Create one
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setMode("sign_in"); setError(null); setSuccessMsg(null); }}
-                  className="text-primary underline-offset-2 hover:underline"
-                >
-                  Sign in
-                </button>
-              </>
-            )}
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Access is by invitation only. Contact your administrator to request access.
           </p>
         </div>
       </div>
