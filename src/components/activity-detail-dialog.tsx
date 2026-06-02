@@ -154,7 +154,7 @@ export function ActivityDetailDialog({
     window.print();
   }
 
-  const det = activity?.details ?? {};
+  const det = (activity?.details ?? {}) as Record<string, string | number | boolean | null | undefined>;
 
   return (
     <>

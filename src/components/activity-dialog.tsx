@@ -160,7 +160,7 @@ export function ActivityDialog({
       if (!draft.guest_id && !draft.is_internal) throw new Error("Please pick a guest");
       if (!draft.name.trim()) throw new Error("Activity name / title is required");
       const payload = {
-        guest_id: draft.guest_id || null,
+        guest_id: (draft.guest_id || null) as string,
         service_type: draft.service_type,
         category: serviceCategory(draft.service_type),
         name: draft.name.trim(),

@@ -21,6 +21,7 @@ export type Database = {
           confirmation_number: string | null
           confirmed_with: string | null
           created_at: string
+          created_by: string | null
           date: string
           details: Json
           duration_minutes: number | null
@@ -38,6 +39,7 @@ export type Database = {
           start_time: string | null
           status: string
           updated_at: string
+          updated_by: string | null
           vendor: string | null
         }
         Insert: {
@@ -46,6 +48,7 @@ export type Database = {
           confirmation_number?: string | null
           confirmed_with?: string | null
           created_at?: string
+          created_by?: string | null
           date: string
           details?: Json
           duration_minutes?: number | null
@@ -63,6 +66,7 @@ export type Database = {
           start_time?: string | null
           status?: string
           updated_at?: string
+          updated_by?: string | null
           vendor?: string | null
         }
         Update: {
@@ -71,6 +75,7 @@ export type Database = {
           confirmation_number?: string | null
           confirmed_with?: string | null
           created_at?: string
+          created_by?: string | null
           date?: string
           details?: Json
           duration_minutes?: number | null
@@ -88,6 +93,7 @@ export type Database = {
           start_time?: string | null
           status?: string
           updated_at?: string
+          updated_by?: string | null
           vendor?: string | null
         }
         Relationships: [
@@ -100,11 +106,45 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          changed_by: string | null
+          changed_by_name: string | null
+          changes: Json
+          created_at: string
+          id: string
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount_usd: number
           category: string
           created_at: string
+          created_by: string | null
           date: string
           description: string | null
           id: string
@@ -116,6 +156,7 @@ export type Database = {
           amount_usd?: number
           category?: string
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           id?: string
@@ -127,6 +168,7 @@ export type Database = {
           amount_usd?: number
           category?: string
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           id?: string
@@ -157,6 +199,7 @@ export type Database = {
           check_in: string | null
           check_out: string | null
           created_at: string
+          created_by: string | null
           dietary: string | null
           email: string | null
           favorite_activities: string | null
@@ -175,6 +218,7 @@ export type Database = {
           special_notes: string | null
           tags: string[]
           updated_at: string
+          updated_by: string | null
           vip_notes: string | null
           whatsapp: string | null
         }
@@ -183,6 +227,7 @@ export type Database = {
           check_in?: string | null
           check_out?: string | null
           created_at?: string
+          created_by?: string | null
           dietary?: string | null
           email?: string | null
           favorite_activities?: string | null
@@ -201,6 +246,7 @@ export type Database = {
           special_notes?: string | null
           tags?: string[]
           updated_at?: string
+          updated_by?: string | null
           vip_notes?: string | null
           whatsapp?: string | null
         }
@@ -209,6 +255,7 @@ export type Database = {
           check_in?: string | null
           check_out?: string | null
           created_at?: string
+          created_by?: string | null
           dietary?: string | null
           email?: string | null
           favorite_activities?: string | null
@@ -227,6 +274,7 @@ export type Database = {
           special_notes?: string | null
           tags?: string[]
           updated_at?: string
+          updated_by?: string | null
           vip_notes?: string | null
           whatsapp?: string | null
         }
@@ -276,6 +324,7 @@ export type Database = {
       inspections: {
         Row: {
           created_at: string
+          created_by: string | null
           date: string
           id: string
           inspector_name: string | null
@@ -284,9 +333,11 @@ export type Database = {
           summary: string | null
           type: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           date?: string
           id?: string
           inspector_name?: string | null
@@ -295,9 +346,11 @@ export type Database = {
           summary?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           date?: string
           id?: string
           inspector_name?: string | null
@@ -306,6 +359,7 @@ export type Database = {
           summary?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -321,6 +375,7 @@ export type Database = {
         Row: {
           cost_estimate: number | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           invoice_url: string | null
@@ -332,11 +387,13 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          updated_by: string | null
           vendor_id: string | null
         }
         Insert: {
           cost_estimate?: number | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           invoice_url?: string | null
@@ -348,11 +405,13 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          updated_by?: string | null
           vendor_id?: string | null
         }
         Update: {
           cost_estimate?: number | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           invoice_url?: string | null
@@ -364,6 +423,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          updated_by?: string | null
           vendor_id?: string | null
         }
         Relationships: [
@@ -559,6 +619,7 @@ export type Database = {
       stay_checklists: {
         Row: {
           created_at: string
+          created_by: string | null
           guest_id: string | null
           id: string
           items: Json
@@ -566,9 +627,11 @@ export type Database = {
           scheduled_date: string | null
           type: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           guest_id?: string | null
           id?: string
           items?: Json
@@ -576,9 +639,11 @@ export type Database = {
           scheduled_date?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           guest_id?: string | null
           id?: string
           items?: Json
@@ -586,6 +651,7 @@ export type Database = {
           scheduled_date?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
