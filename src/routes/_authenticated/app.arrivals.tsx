@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Check, Trash2 } from "lucide-react";
+import { Plus, Check, Trash2, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   ARRIVAL_CHECKLIST_DEFAULT, DEPARTURE_CHECKLIST_DEFAULT,
 } from "@/lib/domain";
 import { PageHeader, PageShell, EmptyState } from "@/components/page-shell";
+import { AuditLogDrawer } from "@/components/audit-log-drawer";
 
 export const Route = createFileRoute("/_authenticated/app/arrivals")({
   component: ArrivalsPage,
@@ -28,6 +29,7 @@ interface Checklist {
 function ArrivalsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [logChecklist, setLogChecklist] = useState<{ id: string; title: string } | null>(null);
 
   const { data: lists } = useQuery({
     queryKey: ["stay_checklists"],
@@ -93,19 +95,35 @@ function ArrivalsPage() {
                   </li>
                 ))}
               </ul>
-              <button onClick={async () => {
-                if (!confirm("Delete checklist?")) return;
-                const { error } = await supabase.from("stay_checklists").delete().eq("id", c.id);
-                if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stay_checklists"] });
-              }} className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-3 w-3" /> Delete
-              </button>
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  onClick={() => setLogChecklist({ id: c.id, title: `${c.type} · ${c.property?.name ?? "—"}` })}
+                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-gold"
+                >
+                  <History className="h-3 w-3" /> Log
+                </button>
+                <button onClick={async () => {
+                  if (!confirm("Delete checklist?")) return;
+                  const { error } = await supabase.from("stay_checklists").delete().eq("id", c.id);
+                  if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stay_checklists"] });
+                }} className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3 w-3" /> Delete
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
 
       <ChecklistDialog open={open} onOpenChange={setOpen} onSaved={() => qc.invalidateQueries({ queryKey: ["stay_checklists"] })} />
+
+      <AuditLogDrawer
+        open={!!logChecklist}
+        onOpenChange={(v) => { if (!v) setLogChecklist(null); }}
+        tableName="stay_checklists"
+        recordId={logChecklist?.id}
+        recordTitle={logChecklist?.title}
+      />
     </PageShell>
   );
 }

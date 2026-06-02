@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
-import { ArrowLeft, Plus, Printer, Mail, Phone, MessageCircle, Globe, BedDouble, Users as UsersIcon, Calendar as CalIcon } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Mail, Phone, MessageCircle, Globe, BedDouble, Users as UsersIcon, Calendar as CalIcon, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { ActivityCard, type ActivityRow, dateLabel } from "@/components/activity
 import { ActivityDialog } from "@/components/activity-dialog";
 import { GuestTagPill } from "@/components/guest-tag-pill";
 import { GUEST_TAGS, type GuestTag } from "@/lib/domain";
+import { AuditLogDrawer } from "@/components/audit-log-drawer";
 
 export const Route = createFileRoute("/_authenticated/app/guests/$guestId")({
   component: GuestDetail,
@@ -27,6 +28,7 @@ function GuestDetail() {
   const qc = useQueryClient();
   const [activityOpen, setActivityOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityRow | undefined>();
+  const [guestLogOpen, setGuestLogOpen] = useState(false);
 
   const { data: guest } = useQuery({
     queryKey: ["guest", guestId],
@@ -78,7 +80,15 @@ function GuestDetail() {
 
       <div className="mt-4 no-print">
         <p className="text-[10px] uppercase tracking-[0.25em] text-gold">Guest profile</p>
-        <h1 className="mt-1 font-display text-4xl text-primary">{guest.full_name}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="mt-1 font-display text-4xl text-primary">{guest.full_name}</h1>
+          <button
+            onClick={() => setGuestLogOpen(true)}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:border-gold/60 hover:text-gold"
+          >
+            <History className="h-3.5 w-3.5" /> Log
+          </button>
+        </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {((guest.tags as GuestTag[]) ?? []).map((t) => <GuestTagPill key={t} tag={t} />)}
         </div>
@@ -173,6 +183,14 @@ function GuestDetail() {
         fixedGuestId={guestId}
         initial={editingActivity}
         defaultDate={guest.check_in ?? undefined}
+      />
+
+      <AuditLogDrawer
+        open={guestLogOpen}
+        onOpenChange={setGuestLogOpen}
+        tableName="guests"
+        recordId={guestId}
+        recordTitle={guest.full_name}
       />
     </div>
   );

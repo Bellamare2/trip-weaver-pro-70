@@ -1,10 +1,12 @@
 import { format, parseISO } from "date-fns";
-import { MapPin, Phone, FileText, Pencil, Trash2, DollarSign, Tag as TagIcon } from "lucide-react";
+import { MapPin, Phone, FileText, Pencil, Trash2, DollarSign, Tag as TagIcon, History } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/status-badge";
 import { type ActivityStatus, categoryAccent } from "@/lib/domain";
+import { AuditLogDrawer } from "@/components/audit-log-drawer";
 
 export interface ActivityRow {
   id: string;
@@ -40,6 +42,7 @@ export function ActivityCard({
   guestLabel?: string;
 }) {
   const qc = useQueryClient();
+  const [logOpen, setLogOpen] = useState(false);
   const del = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("activities").delete().eq("id", activity.id);
@@ -81,6 +84,14 @@ export function ActivityCard({
             </div>
             <div className="flex items-center gap-1">
               <StatusBadge status={activity.status} activityId={activity.id} />
+              <button
+                onClick={() => setLogOpen(true)}
+                className="rounded-md p-1.5 text-muted-foreground opacity-0 hover:bg-muted hover:text-gold group-hover:opacity-100"
+                aria-label="Change log"
+                title="Change log"
+              >
+                <History className="h-3.5 w-3.5" />
+              </button>
               {onEdit && (
                 <button
                   onClick={onEdit}
@@ -118,6 +129,14 @@ export function ActivityCard({
         </div>
       </div>
       <span className="sr-only"><Phone /></span>
+
+      <AuditLogDrawer
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        tableName="activities"
+        recordId={activity.id}
+        recordTitle={activity.name}
+      />
     </article>
   );
 }
