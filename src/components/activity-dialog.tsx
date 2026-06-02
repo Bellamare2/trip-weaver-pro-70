@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, UserPlus } from "lucide-react";
+import { ExternalLink, UserPlus, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -103,6 +103,53 @@ export function ActivityDialog({
     enabled: open && !fixedGuestId,
   });
 
+  const { data: properties } = useQuery({
+    queryKey: ["properties", "lite"],
+    queryFn: async () => {
+      const { data } = await supabase.from("properties").select("id, name").order("name");
+      return data ?? [];
+    },
+    enabled: open,
+  });
+
+  // Quick-add guest state
+  const [showQuickGuest, setShowQuickGuest] = useState(false);
+  const [quickGuest, setQuickGuest] = useState({
+    full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "",
+  });
+  const [quickGuestProperty, setQuickGuestProperty] = useState("");
+  const [quickGuestPropertyCustom, setQuickGuestPropertyCustom] = useState(false);
+
+  const createQuickGuest = useMutation({
+    mutationFn: async () => {
+      if (!quickGuest.full_name.trim()) throw new Error("Full name is required");
+      const { data: { user } } = await supabase.auth.getUser();
+      const prop = quickGuestPropertyCustom ? quickGuestProperty : (quickGuestProperty || null);
+      const { data, error } = await supabase.from("guests").insert({
+        full_name: quickGuest.full_name.trim(),
+        property: prop || null,
+        check_in: quickGuest.check_in || null,
+        check_out: quickGuest.check_out || null,
+        phone: quickGuest.phone || null,
+        whatsapp: quickGuest.whatsapp || null,
+        created_by: user?.id ?? null,
+      }).select("id, full_name, property").single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (newGuest) => {
+      toast.success(`Guest "${newGuest.full_name}" added`);
+      qc.invalidateQueries({ queryKey: ["guests-lite"] });
+      qc.invalidateQueries({ queryKey: ["guests"] });
+      setD("guest_id", newGuest.id);
+      setShowQuickGuest(false);
+      setQuickGuest({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
+      setQuickGuestProperty("");
+      setQuickGuestPropertyCustom(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const setD = (k: keyof ActivityDraft, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
   const setDetail = (k: string, v: unknown) =>
     setDraft((d) => ({ ...d, details: { ...d.details, [k]: v } }));
@@ -172,25 +219,83 @@ export function ActivityDialog({
           {/* Guest + Service type */}
           <div className="grid gap-3 md:grid-cols-2">
             {!fixedGuestId ? (
-              <Field label="Guest *">
-                <div className="flex gap-2">
-                  <Select value={draft.guest_id} onValueChange={(v) => setD("guest_id", v)}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Search guest…" /></SelectTrigger>
-                    <SelectContent>
-                      {(guests ?? []).map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {g.full_name}{g.property ? ` · ${g.property}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Link to="/app/guests" onClick={() => onOpenChange(false)}>
-                    <Button type="button" variant="outline" size="icon" title="Add guest">
-                      <UserPlus className="h-4 w-4" />
+              <div className="space-y-2 md:col-span-2">
+                <Field label="Guest *">
+                  <div className="flex gap-2">
+                    <Select value={draft.guest_id} onValueChange={(v) => setD("guest_id", v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select guest…" /></SelectTrigger>
+                      <SelectContent>
+                        {(guests ?? []).map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.full_name}{g.property ? ` · ${g.property}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button" variant="outline" size="icon"
+                      title="Quick-add guest"
+                      onClick={() => setShowQuickGuest((v) => !v)}
+                      className={showQuickGuest ? "border-gold text-gold" : ""}
+                    >
+                      {showQuickGuest ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
                     </Button>
-                  </Link>
-                </div>
-              </Field>
+                  </div>
+                </Field>
+
+                {/* Inline quick-add guest form */}
+                {showQuickGuest && (
+                  <div className="rounded-lg border border-gold/40 bg-gold/5 p-4">
+                    <p className="mb-3 text-[10px] uppercase tracking-[0.25em] text-gold">New guest</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Full name *">
+                        <Input value={quickGuest.full_name} onChange={(e) => setQuickGuest((q) => ({ ...q, full_name: e.target.value }))} placeholder="e.g. John Smith" />
+                      </Field>
+                      <Field label="Property / Villa">
+                        {quickGuestPropertyCustom ? (
+                          <div className="flex gap-2">
+                            <Input
+                              value={quickGuestProperty}
+                              onChange={(e) => setQuickGuestProperty(e.target.value)}
+                              placeholder="Type property name…"
+                              className="flex-1"
+                            />
+                            <Button type="button" variant="outline" size="icon" onClick={() => { setQuickGuestPropertyCustom(false); setQuickGuestProperty(""); }}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select value={quickGuestProperty} onValueChange={(v) => { if (v === "__custom") { setQuickGuestPropertyCustom(true); setQuickGuestProperty(""); } else setQuickGuestProperty(v); }}>
+                            <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
+                            <SelectContent>
+                              {(properties ?? []).map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                              <SelectItem value="__custom">Custom…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </Field>
+                      <Field label="Check-in">
+                        <Input type="date" value={quickGuest.check_in} onChange={(e) => setQuickGuest((q) => ({ ...q, check_in: e.target.value }))} />
+                      </Field>
+                      <Field label="Check-out">
+                        <Input type="date" value={quickGuest.check_out} onChange={(e) => setQuickGuest((q) => ({ ...q, check_out: e.target.value }))} />
+                      </Field>
+                      <Field label="Phone">
+                        <Input value={quickGuest.phone} onChange={(e) => setQuickGuest((q) => ({ ...q, phone: e.target.value }))} />
+                      </Field>
+                      <Field label="WhatsApp">
+                        <Input value={quickGuest.whatsapp} onChange={(e) => setQuickGuest((q) => ({ ...q, whatsapp: e.target.value }))} placeholder="+52…" />
+                      </Field>
+                    </div>
+                    <div className="mt-3 flex justify-end gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowQuickGuest(false)}>Cancel</Button>
+                      <Button type="button" size="sm" onClick={() => createQuickGuest.mutate()} disabled={createQuickGuest.isPending}>
+                        {createQuickGuest.isPending ? "Adding…" : "Add guest"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : <div />}
             <Field label="Service *">
               <Select value={draft.service_type} onValueChange={(v) => setD("service_type", v as ServiceType)}>
