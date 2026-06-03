@@ -216,7 +216,32 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   );
 }
 
-function JsonList({
+function DeleteDialog({
+  open, onOpenChange, propertyName, onConfirm, isPending,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  propertyName: string;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-display">Delete property</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to delete <span className="font-medium text-primary">{propertyName}</span>? This action cannot be undone.
+        </p>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
   items, fields, onChange,
 }: {
   items: Array<Record<string, string>>;
