@@ -242,6 +242,7 @@ function DeleteDialog({
     </Dialog>
   );
 }
+function JsonList({
   items, fields, onChange,
 }: {
   items: Array<Record<string, string>>;
