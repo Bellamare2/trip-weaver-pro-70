@@ -31,6 +31,7 @@ interface Ticket {
 function MaintenancePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const { data: tickets } = useQuery({
     queryKey: ["maintenance"],
@@ -69,7 +70,11 @@ function MaintenancePage() {
               <div className="mt-2 space-y-2">
                 {items.length === 0 && <p className="rounded-md border border-dashed border-border bg-background/50 p-3 text-center text-[11px] text-muted-foreground">Empty</p>}
                 {items.map((t) => (
-                  <div key={t.id} className={`rounded-md border bg-card p-3 shadow-elegant ${maintenanceStatusStyles[s]}`}>
+                  <div
+                    key={t.id}
+                    onClick={() => setEditId(t.id)}
+                    className={`cursor-pointer rounded-md border bg-card p-3 shadow-elegant transition-shadow hover:shadow-lg ${maintenanceStatusStyles[s]}`}
+                  >
                     <p className="text-sm font-medium text-primary">{t.title}</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {t.property?.name ?? "—"}{t.vendor ? ` · ${t.vendor.name}` : ""}
@@ -81,7 +86,9 @@ function MaintenancePage() {
                       </span>
                       <select
                         className="rounded border border-border bg-background px-1 py-0.5 text-[10px]"
-                        value={t.status} onChange={(e) => setStatus.mutate({ id: t.id, status: e.target.value as MaintenanceStatus })}
+                        value={t.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setStatus.mutate({ id: t.id, status: e.target.value as MaintenanceStatus })}
                       >
                         {MAINTENANCE_STATUSES.map((x) => <option key={x} value={x}>{x}</option>)}
                       </select>
@@ -95,6 +102,11 @@ function MaintenancePage() {
       </div>
 
       <TicketDialog open={open} onOpenChange={setOpen} onSaved={() => qc.invalidateQueries({ queryKey: ["maintenance"] })} />
+      <EditTicketDialog
+        ticketId={editId}
+        onClose={() => setEditId(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["maintenance"] })}
+      />
     </PageShell>
   );
 }
