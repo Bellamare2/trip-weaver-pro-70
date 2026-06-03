@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ interface Ticket {
 function MaintenancePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const { data: tickets } = useQuery({
     queryKey: ["maintenance"],
@@ -69,7 +70,11 @@ function MaintenancePage() {
               <div className="mt-2 space-y-2">
                 {items.length === 0 && <p className="rounded-md border border-dashed border-border bg-background/50 p-3 text-center text-[11px] text-muted-foreground">Empty</p>}
                 {items.map((t) => (
-                  <div key={t.id} className={`rounded-md border bg-card p-3 shadow-elegant ${maintenanceStatusStyles[s]}`}>
+                  <div
+                    key={t.id}
+                    onClick={() => setEditId(t.id)}
+                    className={`cursor-pointer rounded-md border bg-card p-3 shadow-elegant transition-shadow hover:shadow-lg ${maintenanceStatusStyles[s]}`}
+                  >
                     <p className="text-sm font-medium text-primary">{t.title}</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {t.property?.name ?? "—"}{t.vendor ? ` · ${t.vendor.name}` : ""}
@@ -81,7 +86,9 @@ function MaintenancePage() {
                       </span>
                       <select
                         className="rounded border border-border bg-background px-1 py-0.5 text-[10px]"
-                        value={t.status} onChange={(e) => setStatus.mutate({ id: t.id, status: e.target.value as MaintenanceStatus })}
+                        value={t.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setStatus.mutate({ id: t.id, status: e.target.value as MaintenanceStatus })}
                       >
                         {MAINTENANCE_STATUSES.map((x) => <option key={x} value={x}>{x}</option>)}
                       </select>
@@ -95,6 +102,11 @@ function MaintenancePage() {
       </div>
 
       <TicketDialog open={open} onOpenChange={setOpen} onSaved={() => qc.invalidateQueries({ queryKey: ["maintenance"] })} />
+      <EditTicketDialog
+        ticketId={editId}
+        onClose={() => setEditId(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["maintenance"] })}
+      />
     </PageShell>
   );
 }
@@ -147,6 +159,13 @@ function TicketDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
         <DialogHeader><DialogTitle className="font-display">New maintenance ticket</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <FF label="Property">
@@ -178,6 +197,160 @@ function TicketDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditTicketDialog({
+  ticketId, onClose, onSaved,
+}: {
+  ticketId: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<{
+    property_id: string; title: string; description: string; vendor_id: string;
+    priority: string; cost_estimate: string; owner_approval_status: string; status: string;
+  } | null>(null);
+
+  const { data: ticket } = useQuery({
+    queryKey: ["maintenance_ticket", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      if (!ticketId) throw new Error("No ticket");
+      const { data, error } = await supabase
+        .from("maintenance_tickets")
+        .select("*")
+        .eq("id", ticketId)
+        .single();
+      if (error) throw error;
+      return data as {
+        id: string; property_id: string; title: string; description: string | null;
+        vendor_id: string | null; priority: string; cost_estimate: number | null;
+        owner_approval_status: string; status: string;
+      };
+    },
+  });
+
+  const { data: properties } = useQuery({
+    queryKey: ["properties", "lite"], enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("properties").select("id, name").order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  const { data: vendors } = useQuery({
+    queryKey: ["vendors", "lite"], enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vendors").select("id, name").order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  useEffect(() => {
+    if (ticket) {
+      setForm({
+        property_id: ticket.property_id,
+        title: ticket.title,
+        description: ticket.description ?? "",
+        vendor_id: ticket.vendor_id ?? "",
+        priority: ticket.priority,
+        cost_estimate: ticket.cost_estimate ? String(ticket.cost_estimate) : "",
+        owner_approval_status: ticket.owner_approval_status,
+        status: ticket.status,
+      });
+    }
+  }, [ticket]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!ticketId || !form) throw new Error("No ticket");
+      if (!form.property_id) throw new Error("Property is required");
+      if (!form.title.trim()) throw new Error("Title is required");
+      const { error } = await supabase.from("maintenance_tickets").update({
+        property_id: form.property_id,
+        title: form.title.trim(),
+        description: form.description || null,
+        vendor_id: form.vendor_id || null,
+        priority: form.priority,
+        cost_estimate: form.cost_estimate ? Number(form.cost_estimate) : null,
+        owner_approval_status: form.owner_approval_status,
+        status: form.status,
+      }).eq("id", ticketId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Ticket updated");
+      onSaved();
+      qc.invalidateQueries({ queryKey: ["maintenance_ticket", ticketId] });
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const current = form ?? {
+    property_id: ticket?.property_id ?? "",
+    title: ticket?.title ?? "",
+    description: ticket?.description ?? "",
+    vendor_id: ticket?.vendor_id ?? "",
+    priority: ticket?.priority ?? "Normal",
+    cost_estimate: ticket?.cost_estimate ? String(ticket.cost_estimate) : "",
+    owner_approval_status: ticket?.owner_approval_status ?? "Not Required",
+    status: ticket?.status ?? "Open",
+  };
+
+  return (
+    <Dialog open={!!ticketId} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+        <DialogHeader><DialogTitle className="font-display">Edit ticket</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FF label="Property">
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={current.property_id} onChange={(e) => setForm({ ...current, property_id: e.target.value })}>
+              <option value="">Select…</option>
+              {properties?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </FF>
+          <FF label="Vendor">
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={current.vendor_id} onChange={(e) => setForm({ ...current, vendor_id: e.target.value })}>
+              <option value="">Unassigned</option>
+              {vendors?.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </FF>
+          <div className="sm:col-span-2"><FF label="Title"><Input value={current.title} onChange={(e) => setForm({ ...current, title: e.target.value })} /></FF></div>
+          <div className="sm:col-span-2"><FF label="Description"><Textarea rows={3} value={current.description} onChange={(e) => setForm({ ...current, description: e.target.value })} /></FF></div>
+          <FF label="Priority">
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={current.priority} onChange={(e) => setForm({ ...current, priority: e.target.value })}>
+              {PRIORITY_LEVELS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </FF>
+          <FF label="Cost estimate (USD)"><Input type="number" value={current.cost_estimate} onChange={(e) => setForm({ ...current, cost_estimate: e.target.value })} /></FF>
+          <FF label="Status">
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={current.status} onChange={(e) => setForm({ ...current, status: e.target.value })}>
+              {MAINTENANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </FF>
+          <FF label="Owner approval">
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={current.owner_approval_status} onChange={(e) => setForm({ ...current, owner_approval_status: e.target.value })}>
+              {["Not Required", "Pending", "Approved", "Rejected"].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </FF>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
