@@ -35,6 +35,8 @@ interface PropertyDetailRow {
 function PropertyDetail() {
   const { propertyId } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: p, isLoading } = useQuery({
     queryKey: ["property", propertyId],
@@ -68,6 +70,19 @@ function PropertyDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteProperty = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("properties").delete().eq("id", propertyId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Property deleted");
+      qc.invalidateQueries({ queryKey: ["properties"] });
+      navigate({ to: "/app/properties" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (isLoading || !current) return <PageShell><p className="text-sm text-muted-foreground">Loading…</p></PageShell>;
 
   const update = (patch: Partial<PropertyDetailRow>) => setForm({ ...(current as PropertyDetailRow), ...patch });
@@ -83,8 +98,19 @@ function PropertyDetail() {
           <p className="text-[10px] uppercase tracking-[0.25em] text-gold">{current.community ?? "Residence"}</p>
           <h1 className="mt-1 font-display text-3xl text-primary md:text-4xl">{current.name}</h1>
         </div>
-        {form && <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="mr-1.5 h-4 w-4" /> Save changes</Button>}
+        <div className="flex items-center gap-2">
+          {form && <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="mr-1.5 h-4 w-4" /> Save changes</Button>}
+          <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" /> Delete</Button>
+        </div>
       </div>
+
+      <DeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        propertyName={current.name}
+        onConfirm={() => deleteProperty.mutate()}
+        isPending={deleteProperty.isPending}
+      />
 
       <Tabs defaultValue="overview" className="mt-6">
         <TabsList className="bg-card">
