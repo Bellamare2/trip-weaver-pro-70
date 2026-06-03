@@ -228,6 +228,7 @@ function EditGuestPanel({ guest, onSaved }: { guest: any; onSaved: () => void })
     language: guest.language ?? "",
   });
   const [tags, setTags] = useState<GuestTag[]>((guest.tags as GuestTag[]) ?? []);
+  const qc = useQueryClient();
   const { data: properties } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
@@ -236,6 +237,22 @@ function EditGuestPanel({ guest, onSaved }: { guest: any; onSaved: () => void })
       return data as { name: string }[];
     },
   });
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customName, setCustomName] = useState("");
+
+  async function addCustomProperty() {
+    const name = customName.trim();
+    if (!name) return;
+    if (!(properties ?? []).some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      const { error } = await supabase.from("properties").insert({ name });
+      if (error) { toast.error(error.message); return; }
+      await qc.invalidateQueries({ queryKey: ["properties"] });
+    }
+    setForm((f) => ({ ...f, property: name }));
+    setCustomName("");
+    setCustomOpen(false);
+    toast.success("Property added");
+  }
 
   const save = useMutation({
     mutationFn: async () => {
