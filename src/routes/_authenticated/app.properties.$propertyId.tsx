@@ -107,7 +107,7 @@ function PropertyDetail() {
       <DeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        propertyName={current.name}
+        propertyName={current.name ?? ""}
         onConfirm={() => deleteProperty.mutate()}
         isPending={deleteProperty.isPending}
       />
