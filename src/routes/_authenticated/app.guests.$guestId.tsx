@@ -289,12 +289,32 @@ function EditGuestPanel({ guest, onSaved }: { guest: any; onSaved: () => void })
             <LabeledInput label="Language" value={form.language} onChange={(v) => setForm({ ...form, language: v })} />
             <div className="space-y-1.5">
               <Label className="text-xs">Property</Label>
-              <Select value={form.property} onValueChange={(v) => setForm({ ...form, property: v })}>
+              <Select
+                value={form.property}
+                onValueChange={(v) => {
+                  if (v === "__custom__") { setCustomOpen(true); return; }
+                  setForm({ ...form, property: v });
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {(properties ?? []).map((p) => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}
+                  <SelectItem value="__custom__">+ Add custom…</SelectItem>
                 </SelectContent>
               </Select>
+              {customOpen && (
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    autoFocus
+                    placeholder="New property name"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomProperty(); } }}
+                  />
+                  <Button type="button" size="sm" onClick={addCustomProperty}>Add</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setCustomOpen(false); setCustomName(""); }}>Cancel</Button>
+                </div>
+              )}
             </div>
             <LabeledInput label="Party size" type="number" value={String(form.party_size)} onChange={(v) => setForm({ ...form, party_size: v })} />
             <LabeledInput label="Check-in" type="date" value={form.check_in} onChange={(v) => setForm({ ...form, check_in: v })} />
