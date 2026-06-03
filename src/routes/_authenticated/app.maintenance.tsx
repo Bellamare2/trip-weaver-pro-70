@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, AlertCircle, X } from "lucide-react";
@@ -253,7 +253,7 @@ function EditTicketDialog({
     },
   });
 
-  useState(() => {
+  useEffect(() => {
     if (ticket) {
       setForm({
         property_id: ticket.property_id,
@@ -266,7 +266,7 @@ function EditTicketDialog({
         status: ticket.status,
       });
     }
-  });
+  }, [ticket]);
 
   const save = useMutation({
     mutationFn: async () => {
