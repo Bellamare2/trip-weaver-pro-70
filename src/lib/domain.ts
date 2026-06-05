@@ -18,6 +18,15 @@ export type ActivityCategory = (typeof CATEGORIES)[number];
 export const GUEST_TAGS = ["VIP", "Returning", "First Stay", "Corporate"] as const;
 export type GuestTag = (typeof GUEST_TAGS)[number];
 
+export const GUEST_TYPES = ["Owner", "Friend of Owner", "Rental"] as const;
+export type GuestType = (typeof GUEST_TYPES)[number];
+
+export const guestTypeStyles: Record<GuestType, string> = {
+  "Owner":           "bg-primary/15 text-primary border-primary/40",
+  "Friend of Owner": "bg-[oklch(0.85_0.08_250)]/40 text-[oklch(0.35_0.12_250)] border-[oklch(0.65_0.08_250)]/50",
+  "Rental":          "bg-gold/15 text-[oklch(0.45_0.13_80)] border-gold/50",
+};
+
 export const statusStyles: Record<ActivityStatus, string> = {
   Requested:
     "bg-warning/15 text-warning-foreground border border-warning/40 [&]:text-[oklch(0.42_0.10_85)]",

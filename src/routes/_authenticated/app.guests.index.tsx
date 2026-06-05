@@ -16,7 +16,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { GuestTagPill } from "@/components/guest-tag-pill";
-import { GUEST_TAGS, type GuestTag } from "@/lib/domain";
+import { GuestTypePill } from "@/components/guest-type-pill";
+import { PropertySelector } from "@/components/property-selector";
+import { GUEST_TAGS, GUEST_TYPES, type GuestTag, type GuestType } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/app/guests/")({
   component: GuestsPage,
@@ -35,19 +37,21 @@ interface Guest {
   party_size: number | null;
   tags: string[];
   language: string | null;
+  guest_type: GuestType | null;
 }
 
 function GuestsPage() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [tagFilter, setTagFilter] = useState<GuestTag | "All">("All");
+  const [typeFilter, setTypeFilter] = useState<GuestType | "All">("All");
 
   const { data: guests } = useQuery({
     queryKey: ["guests"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("guests")
-        .select("id, full_name, nationality, email, phone, whatsapp, property, check_in, check_out, party_size, tags, language")
+        .select("id, full_name, nationality, email, phone, whatsapp, property, check_in, check_out, party_size, tags, language, guest_type")
         .order("full_name");
       if (error) throw error;
       return data as Guest[];
@@ -58,6 +62,7 @@ function GuestsPage() {
     const s = q.trim().toLowerCase();
     return (guests ?? []).filter((g) => {
       if (tagFilter !== "All" && !(g.tags ?? []).includes(tagFilter)) return false;
+      if (typeFilter !== "All" && g.guest_type !== typeFilter) return false;
       if (!s) return true;
       return (
         g.full_name.toLowerCase().includes(s) ||
@@ -65,7 +70,7 @@ function GuestsPage() {
         (g.email ?? "").toLowerCase().includes(s)
       );
     });
-  }, [guests, q, tagFilter]);
+  }, [guests, q, tagFilter, typeFilter]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
@@ -82,17 +87,34 @@ function GuestsPage() {
         </Dialog>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
+      <div className="mt-6 space-y-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, property, email…" className="pl-9" />
         </div>
+        {/* Type filter */}
+        <div className="flex flex-wrap gap-1.5">
+          {(["All", ...GUEST_TYPES] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t as GuestType | "All")}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                typeFilter === t
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-accent/50"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        {/* Tag filter */}
         <div className="flex flex-wrap gap-1.5">
           {(["All", ...GUEST_TAGS] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTagFilter(t as GuestTag | "All")}
-              className={`rounded-full border px-3 py-1 text-xs ${
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 tagFilter === t
                   ? "border-gold bg-gold/15 text-[oklch(0.45_0.13_80)]"
                   : "border-border text-muted-foreground hover:bg-accent/50"
@@ -135,11 +157,10 @@ function GuestsPage() {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
             </div>
-            {g.tags && g.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
-              </div>
-            )}
+            <div className="mt-3 flex flex-wrap gap-1">
+              {g.guest_type && <GuestTypePill type={g.guest_type} size="sm" />}
+              {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+            </div>
           </Link>
         ))}
       </div>
@@ -149,14 +170,6 @@ function GuestsPage() {
 
 function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
   const qc = useQueryClient();
-  const { data: properties } = useQuery({
-    queryKey: ["properties"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("properties").select("name").order("name");
-      if (error) throw error;
-      return data as { name: string }[];
-    },
-  });
 
   const [form, setForm] = useState({
     full_name: "", nationality: "", email: "", phone: "", whatsapp: "",
@@ -165,6 +178,7 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
     allergies: "", vip_notes: "", special_notes: "",
   });
   const [tags, setTags] = useState<GuestTag[]>([]);
+  const [guestType, setGuestType] = useState<GuestType | "">("");
   const toggle = (t: GuestTag) =>
     setTags((arr) => (arr.includes(t) ? arr.filter((x) => x !== t) : [...arr, t]));
 
@@ -189,6 +203,7 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
         allergies: form.allergies || null,
         vip_notes: form.vip_notes || null,
         special_notes: form.special_notes || null,
+        guest_type: guestType || null,
         tags,
         created_by: user?.id ?? null,
       });
@@ -218,10 +233,14 @@ function NewGuestDialog({ onCreated }: { onCreated: () => void }) {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Property">
-            <Select value={form.property} onValueChange={(v) => setForm({ ...form, property: v })}>
-              <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
+            <PropertySelector value={form.property} onChange={(v) => setForm({ ...form, property: v })} />
+          </Field>
+          <Field label="Guest type">
+            <Select value={guestType} onValueChange={(v) => setGuestType(v as GuestType | "")}>
+              <SelectTrigger><SelectValue placeholder="Select type…" /></SelectTrigger>
               <SelectContent>
-                {(properties ?? []).map((p) => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}
+                <SelectItem value="__none">— Unknown —</SelectItem>
+                {GUEST_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
