@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActivityCard, type ActivityRow } from "@/components/activity-card";
 import { GuestTagPill } from "@/components/guest-tag-pill";
 import { ActivityDialog, type ActivityDraft } from "@/components/activity-dialog";
@@ -60,8 +61,7 @@ function Dashboard() {
   const [internalRequestOpen, setInternalRequestOpen] = useState(false);
   const [editing, setEditing] = useState<(Partial<ActivityDraft> & { id?: string }) | null>(null);
   const [reservationOpen, setReservationOpen] = useState(false);
-  // Quick-add reservation needs a guest — we open ReservationDialog with a guest picker
-  const [reservationGuestId, setReservationGuestId] = useState<string | null>(null);
+  const [newGuestOpen, setNewGuestOpen] = useState(false);
 
   // Stable reference — new Date() on every render would bust every useMemo below
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -174,6 +174,9 @@ function Dashboard() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setReservationOpen(true)}>
             <BookOpen className="mr-1.5 h-4 w-4" /> New reservation
+          </Button>
+          <Button variant="outline" onClick={() => setNewGuestOpen(true)}>
+            <Users className="mr-1.5 h-4 w-4" /> New guest
           </Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Add activity</Button>
         </div>
@@ -452,6 +455,13 @@ function Dashboard() {
         />
       )}
 
+      {/* New guest dialog */}
+      <NewGuestDialog
+        open={newGuestOpen}
+        onOpenChange={setNewGuestOpen}
+        onCreated={() => qc.invalidateQueries({ queryKey: ["dashboard", "guests"] })}
+      />
+
       <p className="sr-only">{inSevenDays}</p>
     </div>
   );
@@ -472,7 +482,7 @@ function ResBadge({ status }: { status: ReservationStatus }) {
 }
 
 // ── New Reservation flow ─────────────────────────────────────────────────────
-// Step 1: pick a guest. Step 2: open ReservationDialog for that guest.
+// Step 1: pick or create a guest. Step 2: open ReservationDialog for that guest.
 function NewReservationFlow({
   guests, open, onOpenChange, onSaved,
 }: {
@@ -481,9 +491,11 @@ function NewReservationFlow({
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
 }) {
+  const qc = useQueryClient();
   const [step, setStep] = useState<"pick" | "reserve">("pick");
   const [selectedGuest, setSelectedGuest] = useState<DashGuest | null>(null);
   const [q, setQ] = useState("");
+  const [addingGuest, setAddingGuest] = useState(false);
 
   const hits = q.trim()
     ? guests.filter((g) => g.full_name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
@@ -502,35 +514,168 @@ function NewReservationFlow({
   }
 
   return (
+    <>
+      <Dialog open={open && !addingGuest} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">New reservation</DialogTitle>
+            <p className="text-sm text-muted-foreground">Select a guest or add a new one</p>
+          </DialogHeader>
+          <Input
+            placeholder="Search guest…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoFocus
+          />
+          <div className="mt-1 max-h-56 overflow-y-auto rounded-md border border-border">
+            {hits.length === 0 && (
+              <p className="p-4 text-center text-sm text-muted-foreground">No guests found.</p>
+            )}
+            {hits.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => { setSelectedGuest(g); setStep("reserve"); }}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/50 border-b border-border last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-primary truncate">{g.full_name}</p>
+                  {g.property && <p className="text-xs text-muted-foreground">{g.property}</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            className="w-full gap-2 border-dashed"
+            onClick={() => setAddingGuest(true)}
+          >
+            <Plus className="h-4 w-4" /> Add new guest
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline new guest creation */}
+      <NewGuestDialog
+        open={addingGuest}
+        onOpenChange={setAddingGuest}
+        onCreated={(newGuest) => {
+          qc.invalidateQueries({ queryKey: ["dashboard", "guests"] });
+          setAddingGuest(false);
+          // Auto-select the new guest and proceed to reservation
+          setSelectedGuest({ id: newGuest.id, full_name: newGuest.full_name, property: newGuest.property, check_in: null, check_out: null, tags: [] });
+          setStep("reserve");
+        }}
+      />
+    </>
+  );
+}
+
+// ── New Guest Dialog ──────────────────────────────────────────────────────────
+function NewGuestDialog({
+  open, onOpenChange, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated?: (g: { id: string; full_name: string; property: string | null }) => void;
+}) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
+  const [propertyCustom, setPropertyCustom] = useState(false);
+
+  const { data: properties } = useQuery({
+    queryKey: ["properties", "lite"],
+    enabled: open,
+    queryFn: async () => { const { data } = await supabase.from("properties").select("id, name").order("name"); return data ?? []; },
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!form.full_name.trim()) throw new Error("Full name is required");
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.from("guests").insert({
+        full_name: form.full_name.trim(),
+        property: form.property || null,
+        check_in: form.check_in || null,
+        check_out: form.check_out || null,
+        phone: form.phone || null,
+        whatsapp: form.whatsapp || null,
+        created_by: user?.id ?? null,
+      }).select("id, full_name, property").single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (g) => {
+      toast.success(`Guest "${g.full_name}" added`);
+      qc.invalidateQueries({ queryKey: ["guests"] });
+      qc.invalidateQueries({ queryKey: ["guests-lite"] });
+      onCreated?.(g);
+      onOpenChange(false);
+      setForm({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
+      setPropertyCustom(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">New reservation</DialogTitle>
-          <p className="text-sm text-muted-foreground">Select a guest to continue</p>
+          <DialogTitle className="font-display text-xl">New guest</DialogTitle>
         </DialogHeader>
-        <Input
-          placeholder="Search guest…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          autoFocus
-        />
-        <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-border">
-          {hits.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No guests found.</p>}
-          {hits.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => { setSelectedGuest(g); setStep("reserve"); }}
-              className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/50 border-b border-border last:border-b-0"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-primary truncate">{g.full_name}</p>
-                {g.property && <p className="text-xs text-muted-foreground">{g.property}</p>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Full name *</label>
+            <Input value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} placeholder="e.g. John Smith" autoFocus />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Property / Villa</label>
+            {propertyCustom ? (
+              <div className="flex gap-2">
+                <Input className="flex-1" value={form.property} onChange={(e) => setForm((f) => ({ ...f, property: e.target.value }))} placeholder="Type property name…" />
+                <Button type="button" variant="outline" size="sm" onClick={() => { setPropertyCustom(false); setForm((f) => ({ ...f, property: "" })); }}>Clear</Button>
               </div>
-            </button>
-          ))}
+            ) : (
+              <SelectPropertyPicker properties={properties ?? []} value={form.property} onChange={(v) => { if (v === "__custom") { setPropertyCustom(true); setForm((f) => ({ ...f, property: "" })); } else setForm((f) => ({ ...f, property: v })); }} />
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Check-in</label>
+            <Input type="date" value={form.check_in} onChange={(e) => setForm((f) => ({ ...f, check_in: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Check-out</label>
+            <Input type="date" value={form.check_out} onChange={(e) => setForm((f) => ({ ...f, check_out: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</label>
+            <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">WhatsApp</label>
+            <Input value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} placeholder="+52…" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Adding…" : "Add guest"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SelectPropertyPicker({ properties, value, onChange }: { properties: { id: string; name: string }[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none">— None —</SelectItem>
+        {properties.map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+        <SelectItem value="__custom">Custom…</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }
 
