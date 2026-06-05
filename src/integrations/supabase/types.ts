@@ -25,7 +25,7 @@ export type Database = {
           date: string
           details: Json
           duration_minutes: number | null
-          guest_id: string
+          guest_id: string | null
           id: string
           internal_notes: string | null
           is_internal: boolean
@@ -34,6 +34,7 @@ export type Database = {
           notes: string | null
           price_usd: number | null
           repeat_pattern: string | null
+          reservation_id: string | null
           roll_over: boolean
           service_type: string
           start_time: string | null
@@ -52,7 +53,7 @@ export type Database = {
           date: string
           details?: Json
           duration_minutes?: number | null
-          guest_id: string
+          guest_id?: string | null
           id?: string
           internal_notes?: string | null
           is_internal?: boolean
@@ -61,6 +62,7 @@ export type Database = {
           notes?: string | null
           price_usd?: number | null
           repeat_pattern?: string | null
+          reservation_id?: string | null
           roll_over?: boolean
           service_type?: string
           start_time?: string | null
@@ -79,7 +81,7 @@ export type Database = {
           date?: string
           details?: Json
           duration_minutes?: number | null
-          guest_id?: string
+          guest_id?: string | null
           id?: string
           internal_notes?: string | null
           is_internal?: boolean
@@ -88,6 +90,7 @@ export type Database = {
           notes?: string | null
           price_usd?: number | null
           repeat_pattern?: string | null
+          reservation_id?: string | null
           roll_over?: boolean
           service_type?: string
           start_time?: string | null
@@ -102,6 +105,13 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
         ]
@@ -204,6 +214,7 @@ export type Database = {
           email: string | null
           favorite_activities: string | null
           full_name: string
+          guest_type: string | null
           id: string
           language: string | null
           nationality: string | null
@@ -232,6 +243,7 @@ export type Database = {
           email?: string | null
           favorite_activities?: string | null
           full_name: string
+          guest_type?: string | null
           id?: string
           language?: string | null
           nationality?: string | null
@@ -260,6 +272,7 @@ export type Database = {
           email?: string | null
           favorite_activities?: string | null
           full_name?: string
+          guest_type?: string | null
           id?: string
           language?: string | null
           nationality?: string | null
@@ -612,6 +625,59 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservations: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          created_by: string | null
+          guest_id: string
+          id: string
+          itinerary_closing: string
+          itinerary_intro: string
+          notes: string | null
+          property: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          guest_id: string
+          id?: string
+          itinerary_closing?: string
+          itinerary_intro?: string
+          notes?: string | null
+          property?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          guest_id?: string
+          id?: string
+          itinerary_closing?: string
+          itinerary_intro?: string
+          notes?: string | null
+          property?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
             referencedColumns: ["id"]
           },
         ]
