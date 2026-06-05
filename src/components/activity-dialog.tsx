@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, UserPlus, X, ChevronDown } from "lucide-react";
+import { PropertySelector } from "@/components/property-selector";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -119,13 +120,12 @@ export function ActivityDialog({
     full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "",
   });
   const [quickGuestProperty, setQuickGuestProperty] = useState("");
-  const [quickGuestPropertyCustom, setQuickGuestPropertyCustom] = useState(false);
 
   const createQuickGuest = useMutation({
     mutationFn: async () => {
       if (!quickGuest.full_name.trim()) throw new Error("Full name is required");
       const { data: { user } } = await supabase.auth.getUser();
-      const prop = quickGuestPropertyCustom ? quickGuestProperty : (quickGuestProperty || null);
+      const prop = quickGuestProperty || null;
       const { data, error } = await supabase.from("guests").insert({
         full_name: quickGuest.full_name.trim(),
         property: prop || null,
@@ -146,7 +146,6 @@ export function ActivityDialog({
       setShowQuickGuest(false);
       setQuickGuest({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
       setQuickGuestProperty("");
-      setQuickGuestPropertyCustom(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -254,27 +253,7 @@ export function ActivityDialog({
                         <Input value={quickGuest.full_name} onChange={(e) => setQuickGuest((q) => ({ ...q, full_name: e.target.value }))} placeholder="e.g. John Smith" />
                       </Field>
                       <Field label="Property / Villa">
-                        {quickGuestPropertyCustom ? (
-                          <div className="flex gap-2">
-                            <Input
-                              value={quickGuestProperty}
-                              onChange={(e) => setQuickGuestProperty(e.target.value)}
-                              placeholder="Type property name…"
-                              className="flex-1"
-                            />
-                            <Button type="button" variant="outline" size="icon" onClick={() => { setQuickGuestPropertyCustom(false); setQuickGuestProperty(""); }}>
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Select value={quickGuestProperty} onValueChange={(v) => { if (v === "__custom") { setQuickGuestPropertyCustom(true); setQuickGuestProperty(""); } else setQuickGuestProperty(v); }}>
-                            <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
-                            <SelectContent>
-                              {(properties ?? []).map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
-                              <SelectItem value="__custom">Custom…</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <PropertySelector value={quickGuestProperty} onChange={setQuickGuestProperty} />
                       </Field>
                       <Field label="Check-in">
                         <Input type="date" value={quickGuest.check_in} onChange={(e) => setQuickGuest((q) => ({ ...q, check_in: e.target.value }))} />

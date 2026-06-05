@@ -20,6 +20,7 @@ import { ActivityCard, type ActivityRow } from "@/components/activity-card";
 import { GuestTagPill } from "@/components/guest-tag-pill";
 import { ActivityDialog, type ActivityDraft } from "@/components/activity-dialog";
 import { ReservationDialog } from "@/components/reservation-dialog";
+import { PropertySelector } from "@/components/property-selector";
 import { StatusBadge } from "@/components/status-badge";
 import { categoryAccent, type GuestTag } from "@/lib/domain";
 
@@ -148,6 +149,21 @@ function Dashboard() {
     (activities ?? []).forEach((a) => s.add(a.date));
     return s;
   }, [activities]);
+  // Days that have at least one In House reservation covering them
+  const inHouseDays = useMemo(() => {
+    const s = new Set<string>();
+    (reservations ?? [])
+      .filter((r) => r.status === "In House" && r.check_in && r.check_out)
+      .forEach((r) => {
+        let d = parseISO(r.check_in!);
+        const end = parseISO(r.check_out!);
+        while (d <= end) {
+          s.add(format(d, "yyyy-MM-dd"));
+          d = addDays(d, 1);
+        }
+      });
+    return s;
+  }, [reservations]);
   const selectedDayActivities = useMemo(
     () => (activities ?? [])
       .filter((a) => a.date === selectedIso)
@@ -245,7 +261,8 @@ function Dashboard() {
               const inMonth = isSameMonth(d, cursor);
               const isSel = isSameDay(d, selectedDay);
               const isToday = isSameDay(d, today);
-              const has = eventDays.has(iso);
+              const hasActivity = eventDays.has(iso);
+              const hasInHouse = inHouseDays.has(iso);
               return (
                 <button
                   key={iso}
@@ -256,8 +273,13 @@ function Dashboard() {
                     inMonth ? "text-primary hover:bg-accent" : "text-muted-foreground/50 hover:bg-accent/40"
                   }`}
                 >
-                  <span className="leading-none">{format(d, "d")}</span>
-                  <span className={`mt-0.5 h-1 w-1 rounded-full ${has ? "bg-destructive" : "bg-transparent"}`} />
+                  {/* Blue ring around day number when someone is in-house */}
+                  <span className={`flex h-5 w-5 items-center justify-center leading-none rounded-full ${
+                    hasInHouse && !isSel ? "ring-2 ring-blue-400 ring-offset-1" : ""
+                  }`}>
+                    {format(d, "d")}
+                  </span>
+                  <span className={`mt-0.5 h-1 w-1 rounded-full ${hasActivity ? "bg-destructive" : "bg-transparent"}`} />
                 </button>
               );
             })}
@@ -571,6 +593,7 @@ function NewReservationFlow({
 }
 
 // ── New Guest Dialog ──────────────────────────────────────────────────────────
+// Dates are intentionally NOT included here — they belong on the Reservation.
 function NewGuestDialog({
   open, onOpenChange, onCreated,
 }: {
@@ -579,14 +602,7 @@ function NewGuestDialog({
   onCreated?: (g: { id: string; full_name: string; property: string | null }) => void;
 }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
-  const [propertyCustom, setPropertyCustom] = useState(false);
-
-  const { data: properties } = useQuery({
-    queryKey: ["properties", "lite"],
-    enabled: open,
-    queryFn: async () => { const { data } = await supabase.from("properties").select("id, name").order("name"); return data ?? []; },
-  });
+  const [form, setForm] = useState({ full_name: "", property: "", phone: "", whatsapp: "", nationality: "", language: "" });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -595,10 +611,10 @@ function NewGuestDialog({
       const { data, error } = await supabase.from("guests").insert({
         full_name: form.full_name.trim(),
         property: form.property || null,
-        check_in: form.check_in || null,
-        check_out: form.check_out || null,
         phone: form.phone || null,
         whatsapp: form.whatsapp || null,
+        nationality: form.nationality || null,
+        language: form.language || null,
         created_by: user?.id ?? null,
       }).select("id, full_name, property").single();
       if (error) throw new Error(error.message);
@@ -610,8 +626,7 @@ function NewGuestDialog({
       qc.invalidateQueries({ queryKey: ["guests-lite"] });
       onCreated?.(g);
       onOpenChange(false);
-      setForm({ full_name: "", property: "", check_in: "", check_out: "", phone: "", whatsapp: "" });
-      setPropertyCustom(false);
+      setForm({ full_name: "", property: "", phone: "", whatsapp: "", nationality: "", language: "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -621,6 +636,7 @@ function NewGuestDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">New guest</DialogTitle>
+          <p className="text-sm text-muted-foreground">Add a guest profile — reservation dates are set when creating a reservation.</p>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
@@ -629,22 +645,7 @@ function NewGuestDialog({
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Property / Villa</label>
-            {propertyCustom ? (
-              <div className="flex gap-2">
-                <Input className="flex-1" value={form.property} onChange={(e) => setForm((f) => ({ ...f, property: e.target.value }))} placeholder="Type property name…" />
-                <Button type="button" variant="outline" size="sm" onClick={() => { setPropertyCustom(false); setForm((f) => ({ ...f, property: "" })); }}>Clear</Button>
-              </div>
-            ) : (
-              <SelectPropertyPicker properties={properties ?? []} value={form.property} onChange={(v) => { if (v === "__custom") { setPropertyCustom(true); setForm((f) => ({ ...f, property: "" })); } else setForm((f) => ({ ...f, property: v })); }} />
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Check-in</label>
-            <Input type="date" value={form.check_in} onChange={(e) => setForm((f) => ({ ...f, check_in: e.target.value }))} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Check-out</label>
-            <Input type="date" value={form.check_out} onChange={(e) => setForm((f) => ({ ...f, check_out: e.target.value }))} />
+            <PropertySelector value={form.property} onChange={(v) => setForm((f) => ({ ...f, property: v }))} />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</label>
@@ -653,6 +654,14 @@ function NewGuestDialog({
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wider text-muted-foreground">WhatsApp</label>
             <Input value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} placeholder="+52…" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Nationality</label>
+            <Input value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Language</label>
+            <Input value={form.language} onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))} placeholder="English, Spanish…" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
@@ -663,19 +672,6 @@ function NewGuestDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SelectPropertyPicker({ properties, value, onChange }: { properties: { id: string; name: string }[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
-      <SelectContent>
-        <SelectItem value="__none">— None —</SelectItem>
-        {properties.map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
-        <SelectItem value="__custom">Custom…</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }
 

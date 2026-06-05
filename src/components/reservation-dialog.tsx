@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -10,9 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { PropertySelector } from "@/components/property-selector";
 
 export interface ReservationRow {
   id: string;
@@ -50,7 +47,6 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
     itinerary_intro: initial?.itinerary_intro ?? DEFAULT_INTRO,
     itinerary_closing: initial?.itinerary_closing ?? DEFAULT_CLOSING,
   });
-  const [propertyCustom, setPropertyCustom] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -66,14 +62,6 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
     }
   }, [open, initial]);
 
-  const { data: properties } = useQuery({
-    queryKey: ["properties", "lite"],
-    enabled: open,
-    queryFn: async () => {
-      const { data } = await supabase.from("properties").select("id, name").order("name");
-      return data ?? [];
-    },
-  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -121,31 +109,10 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
           {/* Property */}
           <div className="space-y-1.5">
             <Label>Property / Villa</Label>
-            {propertyCustom ? (
-              <div className="flex gap-2">
-                <Input
-                  className="flex-1"
-                  value={form.property}
-                  onChange={(e) => setForm((f) => ({ ...f, property: e.target.value }))}
-                  placeholder="Type property name…"
-                />
-                <Button type="button" variant="outline" size="icon" onClick={() => { setPropertyCustom(false); setForm((f) => ({ ...f, property: "" })); }}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <Select
-                value={form.property}
-                onValueChange={(v) => { if (v === "__custom") { setPropertyCustom(true); setForm((f) => ({ ...f, property: "" })); } else setForm((f) => ({ ...f, property: v })); }}
-              >
-                <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">— No property —</SelectItem>
-                  {(properties ?? []).map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
-                  <SelectItem value="__custom">Custom…</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <PropertySelector
+              value={form.property}
+              onChange={(v) => setForm((f) => ({ ...f, property: v }))}
+            />
           </div>
 
           {/* Dates */}
