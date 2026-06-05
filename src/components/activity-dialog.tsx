@@ -24,6 +24,7 @@ import {
 export interface ActivityDraft {
   id?: string;
   guest_id: string;
+  reservation_id?: string | null;
   service_type: ServiceType;
   name: string;
   date: string;
@@ -160,7 +161,8 @@ export function ActivityDialog({
       if (!draft.guest_id && !draft.is_internal) throw new Error("Please pick a guest");
       if (!draft.name.trim()) throw new Error("Activity name / title is required");
       const payload = {
-        guest_id: (draft.guest_id || null) as string,
+        guest_id: draft.guest_id || null,
+        reservation_id: draft.reservation_id ?? null,
         service_type: draft.service_type,
         category: serviceCategory(draft.service_type),
         name: draft.name.trim(),

@@ -3,7 +3,9 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
-import { ArrowLeft, Plus, Printer, Mail, Phone, MessageCircle, Globe, BedDouble, Users as UsersIcon, Calendar as CalIcon, History } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Mail, Phone, MessageCircle, Globe, BedDouble, Users as UsersIcon, Calendar as CalIcon, History, BookOpen, Pencil, Trash2 } from "lucide-react";
+import { ReservationDialog, type ReservationRow } from "@/components/reservation-dialog";
+import { ItineraryDialog } from "@/components/itinerary-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,9 @@ function GuestDetail() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityRow | undefined>();
   const [guestLogOpen, setGuestLogOpen] = useState(false);
+  const [reservationOpen, setReservationOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<ReservationRow | undefined>();
+  const [itineraryReservation, setItineraryReservation] = useState<ReservationRow | null>(null);
 
   const { data: guest } = useQuery({
     queryKey: ["guest", guestId],
@@ -36,6 +41,17 @@ function GuestDetail() {
       const { data, error } = await supabase.from("guests").select("*").eq("id", guestId).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: reservations } = useQuery({
+    queryKey: ["reservations", guestId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations").select("*").eq("guest_id", guestId)
+        .order("check_in", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return data as ReservationRow[];
     },
   });
 
@@ -98,7 +114,7 @@ function GuestDetail() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
+          <TabsTrigger value="reservations">Reservations</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
@@ -129,30 +145,29 @@ function GuestDetail() {
           <PreferencesEditor guest={guest} onSaved={() => qc.invalidateQueries({ queryKey: ["guest", guestId] })} />
         </TabsContent>
 
-        <TabsContent value="itinerary" className="mt-6">
+        <TabsContent value="reservations" className="mt-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl text-primary">Upcoming itinerary</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => window.print()}>
-                <Printer className="mr-1.5 h-4 w-4" /> Print / PDF
-              </Button>
-              <Button onClick={openNew}><Plus className="mr-1.5 h-4 w-4" /> Add activity</Button>
-            </div>
+            <h2 className="font-display text-xl text-primary">Reservations</h2>
+            <Button onClick={() => { setEditingReservation(undefined); setReservationOpen(true); }}>
+              <Plus className="mr-1.5 h-4 w-4" /> New reservation
+            </Button>
           </div>
 
-          {grouped.length === 0 ? (
+          {(!reservations || reservations.length === 0) ? (
             <p className="mt-6 rounded-md border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              No upcoming activities. Add the first one.
+              No reservations yet. Create the first one.
             </p>
           ) : (
-            <div className="mt-6 space-y-6">
-              {grouped.map(([date, items]) => (
-                <section key={date}>
-                  <h3 className="mb-2 border-b border-border pb-1.5 font-display text-lg text-primary">{dateLabel(date)}</h3>
-                  <div className="space-y-3">
-                    {items.map((a) => <ActivityCard key={a.id} activity={a} onEdit={() => openEdit(a)} />)}
-                  </div>
-                </section>
+            <div className="mt-4 space-y-3">
+              {reservations.map((r) => (
+                <ReservationCard
+                  key={r.id}
+                  reservation={r}
+                  guestName={guest.full_name}
+                  onEdit={() => { setEditingReservation(r); setReservationOpen(true); }}
+                  onItinerary={() => setItineraryReservation(r)}
+                  onDeleted={() => qc.invalidateQueries({ queryKey: ["reservations", guestId] })}
+                />
               ))}
             </div>
           )}
@@ -176,6 +191,24 @@ function GuestDetail() {
 
       {/* Print layout */}
       <PrintLayout guest={guest} groups={grouped} />
+
+      <ReservationDialog
+        open={reservationOpen}
+        onOpenChange={setReservationOpen}
+        guestId={guestId}
+        guestName={guest.full_name}
+        initial={editingReservation}
+      />
+
+      {itineraryReservation && (
+        <ItineraryDialog
+          open={!!itineraryReservation}
+          onOpenChange={(v) => { if (!v) setItineraryReservation(null); }}
+          reservation={itineraryReservation}
+          guestName={guest.full_name}
+          guestId={guestId}
+        />
+      )}
 
       <ActivityDialog
         open={activityOpen}
@@ -424,6 +457,64 @@ function PrintLayout({ guest, groups }: { guest: any; groups: [string, ActivityR
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+// ── ReservationCard ──────────────────────────────────────────────────────────
+function ReservationCard({
+  reservation, guestName, onEdit, onItinerary, onDeleted,
+}: {
+  reservation: ReservationRow;
+  guestName: string;
+  onEdit: () => void;
+  onItinerary: () => void;
+  onDeleted: () => void;
+}) {
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("reservations").delete().eq("id", reservation.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => { toast.success("Reservation deleted"); onDeleted(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const stayLine = [
+    reservation.check_in && reservation.check_out
+      ? `${format(parseISO(reservation.check_in), "MMM d")} – ${format(parseISO(reservation.check_out), "MMM d, yyyy")}`
+      : reservation.check_in
+      ? `Check-in ${format(parseISO(reservation.check_in), "MMM d, yyyy")}`
+      : reservation.check_out
+      ? `Check-out ${format(parseISO(reservation.check_out), "MMM d, yyyy")}`
+      : "Dates pending",
+  ].join("");
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 shadow-elegant">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Reservation</p>
+          <h3 className="mt-1 font-display text-lg text-primary">{reservation.property ?? "No property"}</h3>
+          <p className="text-sm text-muted-foreground">{stayLine}</p>
+          {reservation.notes && <p className="mt-1 text-xs text-muted-foreground">{reservation.notes}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" variant="outline" onClick={onItinerary} className="gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" /> Itinerary
+          </Button>
+          <button onClick={onEdit} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => { if (confirm("Delete this reservation?")) del.mutate(); }}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

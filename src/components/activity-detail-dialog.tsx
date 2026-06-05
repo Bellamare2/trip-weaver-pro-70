@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import {
-  Pencil, Trash2, History, Printer, Mail, Copy, X,
-  MapPin, DollarSign, Tag, Clock, User, Car, Users,
-  FileText, MessageSquare, CheckCircle,
+  Pencil, Trash2, History, Printer, Mail, Copy,
+  MapPin, DollarSign, Clock, User, Users,
+  FileText, MessageSquare, CheckCircle, ExternalLink,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -171,10 +172,27 @@ export function ActivityDetailDialog({
                     {activity.service_type || activity.category}
                   </p>
                   <h2 className="font-display text-2xl leading-tight text-primary">{activity.name}</h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {activity.guests?.full_name ?? "Internal request"}
-                    {activity.guests?.property ? ` · ${activity.guests.property}` : ""}
-                  </p>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    {activity.guests ? (
+                      <Link
+                        to="/app/guests/$guestId"
+                        params={{ guestId: activity.guest_id! }}
+                        onClick={() => onOpenChange(false)}
+                        className="flex items-center gap-1 text-sm text-gold hover:underline"
+                      >
+                        <User className="h-3.5 w-3.5" />
+                        {activity.guests.full_name}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Internal request</span>
+                    )}
+                    {activity.guests?.property && (
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />{activity.guests.property}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <StatusBadge status={activity.status} activityId={activity.id} />
