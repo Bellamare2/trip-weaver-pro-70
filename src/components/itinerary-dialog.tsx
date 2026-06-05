@@ -303,7 +303,7 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
                     <p style={{ color: "#aaa", fontSize: "12px", fontStyle: "italic" }}>No tickets selected.</p>
                   )}
                   {selectedActivities.map((a) => {
-                    const det = a.details ?? {};
+                    const det = (a.details ?? {}) as Record<string, unknown>;
                     return (
                       <div key={a.id} style={{ borderTop: "1px solid #e5e5e5", paddingTop: "14px", marginTop: "14px" }}>
                         <p style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>{a.name}</p>
