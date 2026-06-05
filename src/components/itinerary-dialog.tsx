@@ -310,13 +310,13 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
                         <DocRow label="Date & Time" value={fmtDateTime(a.date, a.start_time)} />
                         {a.vendor && <DocRow label="Vendor" value={a.vendor} />}
                         {a.location && <DocRow label="Location" value={a.location} />}
-                        {det.pickup && <DocRow label="Pick-up" value={String(det.pickup)} />}
-                        {det.destination && <DocRow label="Destination" value={String(det.destination)} />}
-                        {det.car_type && <DocRow label="Car type" value={String(det.car_type)} />}
-                        {det.adults && <DocRow label="Number of adults" value={String(det.adults)} />}
-                        {det.children && <DocRow label="Number of children" value={String(det.children)} />}
-                        {det.flight_number && <DocRow label="Flight #" value={String(det.flight_number)} />}
-                        {det.charge_type && <DocRow label="Charge type" value={String(det.charge_type)} />}
+                        {Boolean(det.pickup) && <DocRow label="Pick-up" value={String(det.pickup)} />}
+                        {Boolean(det.destination) && <DocRow label="Destination" value={String(det.destination)} />}
+                        {Boolean(det.car_type) && <DocRow label="Car type" value={String(det.car_type)} />}
+                        {Boolean(det.adults) && <DocRow label="Number of adults" value={String(det.adults)} />}
+                        {Boolean(det.children) && <DocRow label="Number of children" value={String(det.children)} />}
+                        {Boolean(det.flight_number) && <DocRow label="Flight #" value={String(det.flight_number)} />}
+                        {Boolean(det.charge_type) && <DocRow label="Charge type" value={String(det.charge_type)} />}
                         {a.price_usd != null && <DocRow label="Total price" value={`$${a.price_usd.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD`} />}
                         {a.notes && <DocRow label="Special notes" value={a.notes} />}
                         {a.confirmation_number && <DocRow label="Confirmation #" value={a.confirmation_number} />}
