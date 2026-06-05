@@ -1,20 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   format, parseISO, addDays, addMonths, isSameDay, isSameMonth, startOfDay,
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
 } from "date-fns";
 import {
   Plus, Search, CalendarCheck, Clock, Users, BedDouble,
-  ChevronLeft, ChevronRight, Sparkles, ClipboardList,
+  ChevronLeft, ChevronRight, Sparkles, ClipboardList, BookOpen,
+  LogIn, LogOut,
 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActivityCard, type ActivityRow } from "@/components/activity-card";
 import { GuestTagPill } from "@/components/guest-tag-pill";
 import { ActivityDialog, type ActivityDraft } from "@/components/activity-dialog";
+import { ReservationDialog } from "@/components/reservation-dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { categoryAccent, type GuestTag } from "@/lib/domain";
 
@@ -31,17 +35,33 @@ interface DashGuest {
   tags: string[];
 }
 
+type ReservationStatus = "Pre-Arrival" | "In House" | "Out";
+
+interface DashReservation {
+  id: string;
+  guest_id: string;
+  property: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  status: ReservationStatus;
+  guests: { id: string; full_name: string; tags: string[] } | null;
+}
+
 interface DashActivity extends ActivityRow {
   service_type?: string | null;
   guests: { full_name: string; property: string | null } | null;
 }
 
 function Dashboard() {
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [guestRequestOpen, setGuestRequestOpen] = useState(false);
   const [internalRequestOpen, setInternalRequestOpen] = useState(false);
   const [editing, setEditing] = useState<(Partial<ActivityDraft> & { id?: string }) | null>(null);
+  const [reservationOpen, setReservationOpen] = useState(false);
+  // Quick-add reservation needs a guest — we open ReservationDialog with a guest picker
+  const [reservationGuestId, setReservationGuestId] = useState<string | null>(null);
 
   // Stable reference — new Date() on every render would bust every useMemo below
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -75,18 +95,42 @@ function Dashboard() {
     },
   });
 
-  const activeToday = useMemo(
-    () => (guests ?? []).filter((g) =>
-      g.check_in && g.check_out &&
-      parseISO(g.check_in) <= today && parseISO(g.check_out) >= today),
-    [guests, today],
+  const { data: reservations } = useQuery({
+    queryKey: ["dashboard", "reservations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("id, guest_id, property, check_in, check_out, status, guests(id, full_name, tags)")
+        .neq("status", "Out")
+        .order("check_in", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data as unknown as DashReservation[];
+    },
+  });
+
+  const setResStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: ReservationStatus }) => {
+      const { error } = await supabase.from("reservations").update({ status }).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // In House = reservations with status "In House"
+  const inHouse = useMemo(
+    () => (reservations ?? []).filter((r) => r.status === "In House"),
+    [reservations],
   );
+
+  // Upcoming = Pre-Arrival with check-in within 7 days
   const upcomingCheckins = useMemo(
-    () => (guests ?? []).filter((g) =>
-      // Use > today (not >=) so same-day arrivals don't appear in both sections
-      g.check_in && parseISO(g.check_in) > today && parseISO(g.check_in) <= addDays(today, 7))
+    () => (reservations ?? [])
+      .filter((r) => r.status === "Pre-Arrival" && r.check_in && parseISO(r.check_in) <= addDays(today, 7))
       .sort((a, b) => (a.check_in! < b.check_in! ? -1 : 1)),
-    [guests, today],
+    [reservations, today],
   );
   const pending = (activities ?? []).filter((a) => a.status === "Requested");
   const todayConfirmed = (activities ?? []).filter(
@@ -127,7 +171,12 @@ function Dashboard() {
           <p className="text-[10px] uppercase tracking-[0.25em] text-gold">Today · {format(today, "EEEE, MMM d")}</p>
           <h1 className="mt-1 font-display text-3xl text-primary md:text-4xl">Bellamare desk</h1>
         </div>
-        <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Add activity</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setReservationOpen(true)}>
+            <BookOpen className="mr-1.5 h-4 w-4" /> New reservation
+          </Button>
+          <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Add activity</Button>
+        </div>
       </div>
 
       {/* Global search */}
@@ -166,7 +215,7 @@ function Dashboard() {
 
       {/* Stat tiles */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="In-residence today" value={activeToday.length} icon={Users} />
+        <StatTile label="In-residence" value={inHouse.length} icon={Users} />
         <StatTile label="Check-ins · 7 days" value={upcomingCheckins.length} icon={BedDouble} />
         <StatTile label="Pending confirmation" value={pending.length} icon={Clock} accent />
         <StatTile label="Today · confirmed" value={todayConfirmed.length} icon={CalendarCheck} />
@@ -212,6 +261,9 @@ function Dashboard() {
           </div>
 
           <div className="mt-4 flex flex-col gap-2">
+            <Button variant="outline" size="sm" onClick={() => setReservationOpen(true)} className="justify-start border-primary/30 text-primary hover:bg-primary/5">
+              <BookOpen className="mr-1.5 h-4 w-4" /> New Reservation
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setGuestRequestOpen(true)} className="justify-start border-gold/50 text-primary hover:bg-gold/10">
               <Sparkles className="mr-1.5 h-4 w-4 text-gold" /> Guest Request
             </Button>
@@ -299,54 +351,87 @@ function Dashboard() {
       </section>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        {/* Upcoming check-ins */}
         <section>
           <h2 className="font-display text-xl text-primary">Upcoming check-ins</h2>
           <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
             {upcomingCheckins.length === 0 && (
               <p className="p-6 text-center text-sm text-muted-foreground">None in the next 7 days.</p>
             )}
-            {upcomingCheckins.map((g) => (
-              <Link
-                key={g.id}
-                to="/app/guests/$guestId"
-                params={{ guestId: g.id }}
-                className="flex items-center justify-between px-4 py-3 hover:bg-accent/40"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-primary truncate">{g.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{g.property ?? "—"} · {format(parseISO(g.check_in!), "MMM d")}</p>
+            {upcomingCheckins.map((r) => {
+              const isToday = r.check_in ? isSameDay(parseISO(r.check_in), today) : false;
+              return (
+                <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                  <Link
+                    to="/app/guests/$guestId"
+                    params={{ guestId: r.guest_id }}
+                    className="min-w-0 flex-1 hover:opacity-80"
+                  >
+                    <p className="font-medium text-primary truncate">{r.guests?.full_name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.property ?? "—"}
+                      {r.check_in ? ` · ${format(parseISO(r.check_in), "MMM d")}` : ""}
+                    </p>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex gap-1">
+                      {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+                    </div>
+                    {isToday && (
+                      <Button
+                        size="sm"
+                        className="gap-1 bg-gold/20 text-gold hover:bg-gold/30 border border-gold/40 h-7 px-2 text-[11px]"
+                        onClick={() => setResStatus.mutate({ id: r.id, status: "In House" })}
+                        disabled={setResStatus.isPending}
+                      >
+                        <LogIn className="h-3 w-3" /> Check In
+                      </Button>
+                    )}
+                    {!isToday && (
+                      <ResBadge status="Pre-Arrival" />
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
 
+        {/* In-residence */}
         <section>
-          <h2 className="font-display text-xl text-primary">In-residence today</h2>
+          <h2 className="font-display text-xl text-primary">In-residence</h2>
           <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
-            {activeToday.length === 0 && (
+            {inHouse.length === 0 && (
               <p className="p-6 text-center text-sm text-muted-foreground">No active guests.</p>
             )}
-            {activeToday.map((g) => (
-              <Link
-                key={g.id}
-                to="/app/guests/$guestId"
-                params={{ guestId: g.id }}
-                className="flex items-center justify-between px-4 py-3 hover:bg-accent/40"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-primary truncate">{g.full_name}</p>
+            {inHouse.map((r) => (
+              <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                <Link
+                  to="/app/guests/$guestId"
+                  params={{ guestId: r.guest_id }}
+                  className="min-w-0 flex-1 hover:opacity-80"
+                >
+                  <p className="font-medium text-primary truncate">{r.guests?.full_name ?? "—"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {g.property ?? "—"} · until {g.check_out ? format(parseISO(g.check_out), "MMM d") : "—"}
+                    {r.property ?? "—"}
+                    {r.check_out ? ` · until ${format(parseISO(r.check_out), "MMM d")}` : ""}
                   </p>
+                </Link>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex gap-1">
+                    {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+                    onClick={() => setResStatus.mutate({ id: r.id, status: "Out" })}
+                    disabled={setResStatus.isPending}
+                  >
+                    <LogOut className="h-3 w-3" /> Check Out
+                  </Button>
                 </div>
-                <div className="flex gap-1">
-                  {(g.tags as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>
@@ -356,8 +441,96 @@ function Dashboard() {
       <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={selectedIso} />
       <ActivityDialog open={internalRequestOpen} onOpenChange={setInternalRequestOpen} defaultDate={selectedIso} defaultInternal />
       <ActivityDialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} initial={editing ?? undefined} />
+
+      {/* New reservation — needs a guest; show guest picker then open dialog */}
+      {reservationOpen && (
+        <NewReservationFlow
+          guests={guests ?? []}
+          open={reservationOpen}
+          onOpenChange={setReservationOpen}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] })}
+        />
+      )}
+
       <p className="sr-only">{inSevenDays}</p>
     </div>
+  );
+}
+
+// ── Reservation status badge ─────────────────────────────────────────────────
+function ResBadge({ status }: { status: ReservationStatus }) {
+  const styles: Record<ReservationStatus, string> = {
+    "Pre-Arrival": "bg-primary/10 text-primary border-primary/30",
+    "In House":    "bg-success/15 border-success/40 text-[oklch(0.40_0.12_150)]",
+    "Out":         "bg-muted text-muted-foreground border-border",
+  };
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${styles[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+// ── New Reservation flow ─────────────────────────────────────────────────────
+// Step 1: pick a guest. Step 2: open ReservationDialog for that guest.
+function NewReservationFlow({
+  guests, open, onOpenChange, onSaved,
+}: {
+  guests: DashGuest[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [step, setStep] = useState<"pick" | "reserve">("pick");
+  const [selectedGuest, setSelectedGuest] = useState<DashGuest | null>(null);
+  const [q, setQ] = useState("");
+
+  const hits = q.trim()
+    ? guests.filter((g) => g.full_name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
+    : guests.slice(0, 8);
+
+  if (step === "reserve" && selectedGuest) {
+    return (
+      <ReservationDialog
+        open
+        onOpenChange={(v) => { if (!v) { onOpenChange(false); setStep("pick"); setSelectedGuest(null); } }}
+        guestId={selectedGuest.id}
+        guestName={selectedGuest.full_name}
+        onSaved={() => { onSaved(); onOpenChange(false); setStep("pick"); setSelectedGuest(null); }}
+      />
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">New reservation</DialogTitle>
+          <p className="text-sm text-muted-foreground">Select a guest to continue</p>
+        </DialogHeader>
+        <Input
+          placeholder="Search guest…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          autoFocus
+        />
+        <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-border">
+          {hits.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No guests found.</p>}
+          {hits.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => { setSelectedGuest(g); setStep("reserve"); }}
+              className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/50 border-b border-border last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-primary truncate">{g.full_name}</p>
+                {g.property && <p className="text-xs text-muted-foreground">{g.property}</p>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
