@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -58,7 +58,6 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         itinerary_intro: initial?.itinerary_intro ?? DEFAULT_INTRO,
         itinerary_closing: initial?.itinerary_closing ?? DEFAULT_CLOSING,
       });
-      setPropertyCustom(false);
     }
   }, [open, initial]);
 
