@@ -25,7 +25,7 @@ export type Database = {
           date: string
           details: Json
           duration_minutes: number | null
-          guest_id: string
+          guest_id: string | null
           id: string
           internal_notes: string | null
           is_internal: boolean
@@ -53,7 +53,7 @@ export type Database = {
           date: string
           details?: Json
           duration_minutes?: number | null
-          guest_id: string
+          guest_id?: string | null
           id?: string
           internal_notes?: string | null
           is_internal?: boolean
@@ -81,7 +81,7 @@ export type Database = {
           date?: string
           details?: Json
           duration_minutes?: number | null
-          guest_id?: string
+          guest_id?: string | null
           id?: string
           internal_notes?: string | null
           is_internal?: boolean
@@ -214,6 +214,7 @@ export type Database = {
           email: string | null
           favorite_activities: string | null
           full_name: string
+          guest_type: string | null
           id: string
           language: string | null
           nationality: string | null
@@ -242,6 +243,7 @@ export type Database = {
           email?: string | null
           favorite_activities?: string | null
           full_name: string
+          guest_type?: string | null
           id?: string
           language?: string | null
           nationality?: string | null
@@ -270,6 +272,7 @@ export type Database = {
           email?: string | null
           favorite_activities?: string | null
           full_name?: string
+          guest_type?: string | null
           id?: string
           language?: string | null
           nationality?: string | null
@@ -638,6 +641,7 @@ export type Database = {
           itinerary_intro: string
           notes: string | null
           property: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -651,6 +655,7 @@ export type Database = {
           itinerary_intro?: string
           notes?: string | null
           property?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -664,6 +669,7 @@ export type Database = {
           itinerary_intro?: string
           notes?: string | null
           property?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
