@@ -18,6 +18,7 @@ import { Route as AuthenticatedAppVehiclesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated/app.reports'
 import { Route as AuthenticatedAppMaintenanceRouteImport } from './routes/_authenticated/app.maintenance'
+import { Route as AuthenticatedAppLogRouteImport } from './routes/_authenticated/app.log'
 import { Route as AuthenticatedAppInspectionsRouteImport } from './routes/_authenticated/app.inspections'
 import { Route as AuthenticatedAppExpensesRouteImport } from './routes/_authenticated/app.expenses'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
@@ -74,6 +75,11 @@ const AuthenticatedAppMaintenanceRoute =
     path: '/app/maintenance',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppLogRoute = AuthenticatedAppLogRouteImport.update({
+  id: '/app/log',
+  path: '/app/log',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppInspectionsRoute =
   AuthenticatedAppInspectionsRouteImport.update({
     id: '/app/inspections',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/expenses': typeof AuthenticatedAppExpensesRoute
   '/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/app/log': typeof AuthenticatedAppLogRoute
   '/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
   '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/expenses': typeof AuthenticatedAppExpensesRoute
   '/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/app/log': typeof AuthenticatedAppLogRoute
   '/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
   '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/_authenticated/app/expenses': typeof AuthenticatedAppExpensesRoute
   '/_authenticated/app/inspections': typeof AuthenticatedAppInspectionsRoute
+  '/_authenticated/app/log': typeof AuthenticatedAppLogRoute
   '/_authenticated/app/maintenance': typeof AuthenticatedAppMaintenanceRoute
   '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/app/calendar'
     | '/app/expenses'
     | '/app/inspections'
+    | '/app/log'
     | '/app/maintenance'
     | '/app/reports'
     | '/app/settings'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/app/calendar'
     | '/app/expenses'
     | '/app/inspections'
+    | '/app/log'
     | '/app/maintenance'
     | '/app/reports'
     | '/app/settings'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/calendar'
     | '/_authenticated/app/expenses'
     | '/_authenticated/app/inspections'
+    | '/_authenticated/app/log'
     | '/_authenticated/app/maintenance'
     | '/_authenticated/app/reports'
     | '/_authenticated/app/settings'
@@ -308,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppMaintenanceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/log': {
+      id: '/_authenticated/app/log'
+      path: '/app/log'
+      fullPath: '/app/log'
+      preLoaderRoute: typeof AuthenticatedAppLogRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/inspections': {
       id: '/_authenticated/app/inspections'
       path: '/app/inspections'
@@ -372,6 +391,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppCalendarRoute: typeof AuthenticatedAppCalendarRoute
   AuthenticatedAppExpensesRoute: typeof AuthenticatedAppExpensesRoute
   AuthenticatedAppInspectionsRoute: typeof AuthenticatedAppInspectionsRoute
+  AuthenticatedAppLogRoute: typeof AuthenticatedAppLogRoute
   AuthenticatedAppMaintenanceRoute: typeof AuthenticatedAppMaintenanceRoute
   AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
@@ -389,6 +409,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppCalendarRoute: AuthenticatedAppCalendarRoute,
   AuthenticatedAppExpensesRoute: AuthenticatedAppExpensesRoute,
   AuthenticatedAppInspectionsRoute: AuthenticatedAppInspectionsRoute,
+  AuthenticatedAppLogRoute: AuthenticatedAppLogRoute,
   AuthenticatedAppMaintenanceRoute: AuthenticatedAppMaintenanceRoute,
   AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,

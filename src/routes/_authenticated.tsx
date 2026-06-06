@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, Calendar, Settings, Menu, X,
   Home, Wrench, ClipboardCheck, Receipt, Car, Briefcase, FileText,
-  CheckSquare, LogOut,
+  CheckSquare, LogOut, History,
 } from "lucide-react";
 import logoNavy from "@/assets/bellamare-logo-navy.jpg";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,7 @@ const groups: NavGroup[] = [
     label: "Workspace",
     items: [
       { to: "/app/settings", label: "Settings", icon: Settings },
+      { to: "/app/log", label: "Activity Log", icon: History },
     ],
   },
 ];

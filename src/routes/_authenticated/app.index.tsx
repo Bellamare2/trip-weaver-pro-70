@@ -110,15 +110,64 @@ function Dashboard() {
   });
 
   const setResStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: ReservationStatus }) => {
+    mutationFn: async ({ id, status, reservation }: { id: string; status: ReservationStatus; reservation: DashReservation }) => {
+      const todayIsoStr = format(today, "yyyy-MM-dd");
+
+      // Validate: can only set In House if today is within check-in/check-out range
+      if (status === "In House") {
+        const ci = reservation.check_in ? parseISO(reservation.check_in) : null;
+        const co = reservation.check_out ? parseISO(reservation.check_out) : null;
+        if (ci && ci > today) {
+          throw new Error(`Can't check in yet — arrival is ${format(ci, "MMM d")}. Move the check-in date first.`);
+        }
+        if (co && co < today) {
+          throw new Error(`Check-out date (${format(co, "MMM d")}) has already passed. Update the dates before checking in.`);
+        }
+      }
+
       const { error } = await supabase.from("reservations").update({ status }).eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+      qc.invalidateQueries({ queryKey: ["reservations"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const deleteRes = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("reservations").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Reservation deleted");
+      qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Auto-advance stale dates once per load:
+  // • Pre-Arrival with check_in in the past → push check_in to tomorrow
+  // • In House with check_out in the past → extend check_out by 1 day
+  const autoAdvanced = useState(false);
+  if (!autoAdvanced[0] && reservations && reservations.length > 0) {
+    autoAdvanced[1](true);
+    const todayStr = format(today, "yyyy-MM-dd");
+    const tomorrowStr = format(addDays(today, 1), "yyyy-MM-dd");
+    reservations.forEach((r) => {
+      if (r.status === "Pre-Arrival" && r.check_in && r.check_in < todayStr) {
+        supabase.from("reservations").update({ check_in: todayStr }).eq("id", r.id).then(() => {
+          qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+        });
+      }
+      if (r.status === "In House" && r.check_out && r.check_out < todayStr) {
+        supabase.from("reservations").update({ check_out: tomorrowStr }).eq("id", r.id).then(() => {
+          qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+        });
+      }
+    });
+  }
 
   // In House = reservations with status "In House"
   const inHouse = useMemo(
@@ -399,22 +448,30 @@ function Dashboard() {
                     </p>
                   </Link>
                   <div className="flex shrink-0 items-center gap-2">
-                    <div className="flex gap-1">
-                      {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
-                    </div>
-                    {isToday && (
-                      <Button
-                        size="sm"
-                        className="gap-1 bg-gold/20 text-gold hover:bg-gold/30 border border-gold/40 h-7 px-2 text-[11px]"
-                        onClick={() => setResStatus.mutate({ id: r.id, status: "In House" })}
-                        disabled={setResStatus.isPending}
-                      >
-                        <LogIn className="h-3 w-3" /> Check In
-                      </Button>
-                    )}
-                    {!isToday && (
-                      <ResBadge status="Pre-Arrival" />
-                    )}
+                    {/* Check In — highlighted on arrival day */}
+                    <Button
+                      size="sm"
+                      className={`gap-1 h-7 px-2 text-[11px] ${isToday
+                        ? "bg-gold/20 text-gold hover:bg-gold/30 border border-gold/40"
+                        : "border border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-primary"
+                      }`}
+                      onClick={() => setResStatus.mutate({ id: r.id, status: "In House", reservation: r })}
+                      disabled={setResStatus.isPending}
+                    >
+                      <LogIn className="h-3 w-3" /> {isToday ? "Check In" : "Mark In House"}
+                    </Button>
+                    {/* Delete */}
+                    <Button
+                      size="sm" variant="ghost"
+                      className="h-7 px-1.5 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Delete reservation for ${r.guests?.full_name ?? "this guest"}?`)) {
+                          deleteRes.mutate(r.id);
+                        }
+                      }}
+                    >
+                      <LogOut className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               );
@@ -450,7 +507,7 @@ function Dashboard() {
                     size="sm"
                     variant="outline"
                     className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
-                    onClick={() => setResStatus.mutate({ id: r.id, status: "Out" })}
+                    onClick={() => { if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
                     disabled={setResStatus.isPending}
                   >
                     <LogOut className="h-3 w-3" /> Check Out

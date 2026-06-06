@@ -17,9 +17,12 @@ export interface ReservationRow {
   property: string | null;
   check_in: string | null;
   check_out: string | null;
+  adults: number | null;
+  kids: number | null;
   notes: string | null;
   itinerary_intro: string;
   itinerary_closing: string;
+  status?: string;
   created_at: string;
 }
 
@@ -43,6 +46,8 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
     property: initial?.property ?? "",
     check_in: initial?.check_in ?? "",
     check_out: initial?.check_out ?? "",
+    adults: initial?.adults?.toString() ?? "",
+    kids: initial?.kids?.toString() ?? "",
     notes: initial?.notes ?? "",
     itinerary_intro: initial?.itinerary_intro ?? DEFAULT_INTRO,
     itinerary_closing: initial?.itinerary_closing ?? DEFAULT_CLOSING,
@@ -54,6 +59,8 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         property: initial?.property ?? "",
         check_in: initial?.check_in ?? "",
         check_out: initial?.check_out ?? "",
+        adults: initial?.adults?.toString() ?? "",
+        kids: initial?.kids?.toString() ?? "",
         notes: initial?.notes ?? "",
         itinerary_intro: initial?.itinerary_intro ?? DEFAULT_INTRO,
         itinerary_closing: initial?.itinerary_closing ?? DEFAULT_CLOSING,
@@ -61,15 +68,17 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
     }
   }, [open, initial]);
 
-
   const save = useMutation({
     mutationFn: async () => {
+      if (!form.property) throw new Error("Property is required");
       const { data: { user } } = await supabase.auth.getUser();
       const payload = {
         guest_id: guestId,
-        property: form.property || null,
+        property: form.property,
         check_in: form.check_in || null,
         check_out: form.check_out || null,
+        adults: form.adults ? Number(form.adults) : null,
+        kids: form.kids ? Number(form.kids) : null,
         notes: form.notes || null,
         itinerary_intro: form.itinerary_intro || DEFAULT_INTRO,
         itinerary_closing: form.itinerary_closing || DEFAULT_CLOSING,
@@ -88,6 +97,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
       toast.success(isEdit ? "Reservation updated" : "Reservation created");
       qc.invalidateQueries({ queryKey: ["reservations", guestId] });
       qc.invalidateQueries({ queryKey: ["guest", guestId] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
       onSaved?.(res);
       onOpenChange(false);
     },
@@ -105,24 +115,39 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Property */}
+          {/* Property — mandatory */}
           <div className="space-y-1.5">
-            <Label>Property / Villa</Label>
+            <Label>Property / Villa <span className="text-destructive">*</span></Label>
             <PropertySelector
               value={form.property}
               onChange={(v) => setForm((f) => ({ ...f, property: v }))}
             />
+            {!form.property && save.isError && (
+              <p className="text-xs text-destructive">Property is required</p>
+            )}
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Check-in <span className="text-muted-foreground">(optional)</span></Label>
+              <Label>Check-in <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input type="date" value={form.check_in} onChange={(e) => setForm((f) => ({ ...f, check_in: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Check-out <span className="text-muted-foreground">(optional)</span></Label>
+              <Label>Check-out <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Input type="date" value={form.check_out} onChange={(e) => setForm((f) => ({ ...f, check_out: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Party size */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Adults</Label>
+              <Input type="number" min={0} placeholder="0" value={form.adults} onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kids</Label>
+              <Input type="number" min={0} placeholder="0" value={form.kids} onChange={(e) => setForm((f) => ({ ...f, kids: e.target.value }))} />
             </div>
           </div>
 
