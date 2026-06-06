@@ -8,7 +8,7 @@ import {
 import {
   Plus, Search, CalendarCheck, Clock, Users, BedDouble,
   ChevronLeft, ChevronRight, Sparkles, ClipboardList, BookOpen,
-  LogIn, LogOut,
+  LogIn, LogOut, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ActivityCard, type ActivityRow } from "@/components/activity-card";
 import { GuestTagPill } from "@/components/guest-tag-pill";
 import { ActivityDialog, type ActivityDraft } from "@/components/activity-dialog";
-import { ReservationDialog } from "@/components/reservation-dialog";
+import { ReservationDialog, type ReservationRow } from "@/components/reservation-dialog";
+import { ItineraryDialog } from "@/components/itinerary-dialog";
 import { PropertySelector } from "@/components/property-selector";
 import { StatusBadge } from "@/components/status-badge";
 import { categoryAccent, type GuestTag } from "@/lib/domain";
@@ -45,6 +46,11 @@ interface DashReservation {
   property: string | null;
   check_in: string | null;
   check_out: string | null;
+  adults: number | null;
+  kids: number | null;
+  notes: string | null;
+  itinerary_intro: string;
+  itinerary_closing: string;
   status: ReservationStatus;
   guests: { id: string; full_name: string; tags: string[] } | null;
 }
@@ -63,6 +69,7 @@ function Dashboard() {
   const [editing, setEditing] = useState<(Partial<ActivityDraft> & { id?: string }) | null>(null);
   const [reservationOpen, setReservationOpen] = useState(false);
   const [newGuestOpen, setNewGuestOpen] = useState(false);
+  const [itinRes, setItinRes] = useState<DashReservation | null>(null);
 
   // Stable reference — new Date() on every render would bust every useMemo below
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -101,7 +108,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("id, guest_id, property, check_in, check_out, status, guests(id, full_name, tags)")
+        .select("id, guest_id, property, check_in, check_out, adults, kids, notes, itinerary_intro, itinerary_closing, status, guests(id, full_name, tags)")
         .neq("status", "Out")
         .order("check_in", { ascending: true, nullsFirst: false });
       if (error) throw error;
@@ -488,21 +495,33 @@ function Dashboard() {
             )}
             {inHouse.map((r) => (
               <div key={r.id} className="flex items-center justify-between px-4 py-3">
-                <Link
-                  to="/app/guests/$guestId"
-                  params={{ guestId: r.guest_id }}
-                  className="min-w-0 flex-1 hover:opacity-80"
-                >
-                  <p className="font-medium text-primary truncate">{r.guests?.full_name ?? "—"}</p>
+                {/* Guest name — link to profile */}
+                <div className="min-w-0 flex-1">
+                  <Link
+                    to="/app/guests/$guestId"
+                    params={{ guestId: r.guest_id }}
+                    className="font-medium text-primary truncate hover:underline block"
+                  >
+                    {r.guests?.full_name ?? "—"}
+                  </Link>
                   <p className="text-xs text-muted-foreground">
                     {r.property ?? "—"}
                     {r.check_out ? ` · until ${format(parseISO(r.check_out), "MMM d")}` : ""}
                   </p>
-                </Link>
+                </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="flex gap-1">
                     {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
                   </div>
+                  {/* Itinerary button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
+                    onClick={() => setItinRes(r)}
+                  >
+                    <FileText className="h-3 w-3" /> Itinerary
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -540,6 +559,17 @@ function Dashboard() {
         onOpenChange={setNewGuestOpen}
         onCreated={() => qc.invalidateQueries({ queryKey: ["dashboard", "guests"] })}
       />
+
+      {/* Itinerary dialog — opened from In-residence row */}
+      {itinRes && (
+        <ItineraryDialog
+          open={!!itinRes}
+          onOpenChange={(v) => { if (!v) setItinRes(null); }}
+          reservation={itinRes as unknown as ReservationRow}
+          guestName={itinRes.guests?.full_name ?? "—"}
+          guestId={itinRes.guest_id}
+        />
+      )}
 
       <p className="sr-only">{inSevenDays}</p>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { Printer, Mail, Download, Plus, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -60,14 +60,35 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
   const [tab, setTab] = useState<"tickets" | "message">(singleActivityId ? "message" : "tickets");
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Load logo as base64 for printing (img src in about:blank windows won't resolve relative paths)
+  const logoDataUrlRef = useRef<string>("");
+  useEffect(() => {
+    fetch(logoUrl)
+      .then((r) => r.blob())
+      .then((b) => {
+        const reader = new FileReader();
+        reader.onload = () => { logoDataUrlRef.current = reader.result as string; };
+        reader.readAsDataURL(b);
+      })
+      .catch(() => {});
+  }, []);
+
   const { data: activities } = useQuery({
     queryKey: ["reservation-activities", reservation.id],
     enabled: open,
     queryFn: async () => {
+      // Include activities directly linked to this reservation, OR activities
+      // for this guest within the stay date range that weren't linked yet.
+      let orFilter = `reservation_id.eq.${reservation.id}`;
+      if (reservation.check_in && reservation.check_out) {
+        orFilter += `,and(guest_id.eq.${guestId},reservation_id.is.null,date.gte.${reservation.check_in},date.lte.${reservation.check_out})`;
+      } else if (reservation.check_in) {
+        orFilter += `,and(guest_id.eq.${guestId},reservation_id.is.null,date.gte.${reservation.check_in})`;
+      }
       const { data, error } = await supabase
         .from("activities")
         .select("*")
-        .eq("reservation_id", reservation.id)
+        .or(orFilter)
         .order("date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false });
       if (error) throw error;
@@ -117,31 +138,68 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
   }
 
   function handlePrint() {
-    const content = printRef.current;
-    if (!content) return;
     const win = window.open("", "_blank");
     if (!win) return;
-    win.document.write(`
-      <!DOCTYPE html><html><head>
-      <title>Itinerary — ${guestName}</title>
+
+    const logoSrc = logoDataUrlRef.current || `${window.location.origin}${logoUrl}`;
+
+    const activitiesHtml = selectedActivities.map((a) => {
+      const det = (a.details ?? {}) as Record<string, unknown>;
+      const rows = [
+        ["Date & Time", fmtDateTime(a.date, a.start_time)],
+        a.vendor ? ["Vendor", a.vendor] : null,
+        a.location ? ["Location", a.location] : null,
+        det.pickup ? ["Pick-up", String(det.pickup)] : null,
+        det.destination ? ["Destination", String(det.destination)] : null,
+        det.car_type ? ["Car type", String(det.car_type)] : null,
+        det.adults ? ["Number of adults", String(det.adults)] : null,
+        det.children ? ["Number of children", String(det.children)] : null,
+        det.flight_number ? ["Flight #", String(det.flight_number)] : null,
+        det.charge_type ? ["Charge type", String(det.charge_type)] : null,
+        a.price_usd != null ? ["Total price", `$${a.price_usd.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD`] : null,
+        a.notes ? ["Special notes", a.notes] : null,
+        a.confirmation_number ? ["Confirmation #", a.confirmation_number] : null,
+        a.confirmed_with ? ["Confirmed with", a.confirmed_with] : null,
+      ].filter(Boolean) as [string, string][];
+
+      return `<div style="border-top:1px solid #e5e5e5;padding:16px 0 4px;">
+        <p style="font-weight:bold;font-size:14px;margin:0 0 10px;">${a.name}</p>
+        ${rows.map(([lbl, val]) => `
+          <div style="display:flex;gap:16px;margin-bottom:5px;font-size:12px;">
+            <span style="min-width:140px;color:#888;text-transform:uppercase;font-size:10px;letter-spacing:1px;padding-top:1px;">${lbl}</span>
+            <span style="color:#1a1a2e;">${val}</span>
+          </div>`).join("")}
+      </div>`;
+    }).join("");
+
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title></title>
+      <meta charset="utf-8">
       <style>
-        body { font-family: 'Georgia', serif; color: #1a1a2e; padding: 40px; max-width: 700px; margin: 0 auto; }
-        h1 { font-size: 22px; margin-bottom: 4px; }
-        .header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; border-bottom: 1px solid #c9a84c; padding-bottom: 20px; }
-        .header img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
-        .eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #c9a84c; }
-        .greeting { margin-bottom: 28px; font-size: 14px; line-height: 1.7; white-space: pre-line; }
-        .activity { border-top: 1px solid #e5e5e5; padding: 16px 0; }
-        .activity-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-        .row { display: flex; gap: 16px; font-size: 12px; margin-bottom: 6px; }
-        .row-label { min-width: 140px; color: #888; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
-        .closing { margin-top: 32px; font-size: 14px; line-height: 1.7; white-space: pre-line; border-top: 1px solid #c9a84c; padding-top: 20px; }
-        @media print { body { padding: 20px; } }
+        @page { margin: 0; size: letter; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+        body { font-family: Georgia, serif; color: #1a1a2e; margin: 0; padding: 0; }
+        .page { max-width: 700px; margin: 0 auto; padding: 48px 40px; }
+        @media print { body { margin: 0; } .page { padding: 32px 28px; } }
       </style>
-      </head><body>${content.innerHTML}</body></html>`);
+    </head><body><div class="page">
+      <div style="display:flex;align-items:center;gap:16px;border-bottom:1px solid #c9a84c;padding-bottom:20px;margin-bottom:28px;">
+        <img src="${logoSrc}" alt="Bellamare" style="width:56px;height:56px;border-radius:8px;object-fit:cover;">
+        <div>
+          <p style="margin:0;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#c9a84c;">Los Cabos · Concierge</p>
+          <p style="margin:0;font-size:20px;font-family:Georgia,serif;color:#1a1a2e;">Bellamare</p>
+        </div>
+      </div>
+      <p style="font-style:italic;font-size:14px;margin:0 0 8px;">Dear ${guestName},</p>
+      <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0 0 20px;">${intro}</p>
+      ${activitiesHtml}
+      <div style="border-top:1px solid #c9a84c55;margin-top:24px;padding-top:16px;">
+        <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0;">${closing}</p>
+      </div>
+    </div></body></html>`);
     win.document.close();
     win.focus();
-    win.print();
+    setTimeout(() => win.print(), 400);
   }
 
   function handleEmail() {
@@ -358,6 +416,7 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
           if (!v) qc.invalidateQueries({ queryKey: ["reservation-activities", reservation.id] });
         }}
         fixedGuestId={guestId}
+        fixedReservationId={reservation.id}
         defaultDate={reservation.check_in ?? undefined}
       />
     </>

@@ -69,12 +69,13 @@ function emptyDraft(guestId: string, date?: string, isInternal = false): Activit
 }
 
 export function ActivityDialog({
-  open, onOpenChange, initial, fixedGuestId, defaultDate, defaultInternal,
+  open, onOpenChange, initial, fixedGuestId, fixedReservationId, defaultDate, defaultInternal,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial?: Partial<ActivityDraft> & { id?: string };
   fixedGuestId?: string;
+  fixedReservationId?: string;
   defaultDate?: string;
   defaultInternal?: boolean;
 }) {
@@ -90,9 +91,10 @@ export function ActivityDialog({
     setDraft({
       ...emptyDraft(fixedGuestId ?? "", defaultDate, defaultInternal),
       ...(initial ?? {}),
+      reservation_id: fixedReservationId ?? initial?.reservation_id ?? null,
       details: { ...(initial?.details ?? {}) },
     } as ActivityDraft);
-  }, [open, initial, fixedGuestId, defaultDate, defaultInternal]);
+  }, [open, initial, fixedGuestId, fixedReservationId, defaultDate, defaultInternal]);
 
   const { data: guests } = useQuery({
     queryKey: ["guests-lite"],
