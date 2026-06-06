@@ -70,6 +70,7 @@ function Dashboard() {
   const [reservationOpen, setReservationOpen] = useState(false);
   const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [itinRes, setItinRes] = useState<DashReservation | null>(null);
+  const [editRes, setEditRes] = useState<DashReservation | null>(null);
 
   // Stable reference — new Date() on every render would bust every useMemo below
   const today = useMemo(() => startOfDay(new Date()), []);
