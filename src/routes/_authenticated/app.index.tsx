@@ -544,6 +544,20 @@ function Dashboard() {
         />
       )}
 
+      {/* Edit reservation — opened by clicking a row */}
+      {editRes && (
+        <ReservationDialog
+          open={!!editRes}
+          onOpenChange={(v) => { if (!v) setEditRes(null); }}
+          guestId={editRes.guest_id}
+          guestName={editRes.guests?.full_name ?? "—"}
+          initial={editRes as unknown as ReservationRow}
+          onSaved={() => { setEditRes(null); qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] }); }}
+        />
+      )}
+
+
+
       <p className="sr-only">{inSevenDays}</p>
     </div>
   );
