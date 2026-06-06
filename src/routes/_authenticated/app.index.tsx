@@ -486,54 +486,75 @@ function Dashboard() {
           </div>
         </section>
 
-        {/* In-residence */}
+        {/* Active reservations (In House + Pre-Arrival) */}
         <section>
-          <h2 className="font-display text-xl text-primary">In-residence</h2>
+          <h2 className="font-display text-xl text-primary">In-residence · Active reservations</h2>
           <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
-            {inHouse.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">No active guests.</p>
+            {(reservations ?? []).length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">No active reservations.</p>
             )}
-            {inHouse.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-4 py-3">
-                {/* Guest name — link to profile */}
-                <div className="min-w-0 flex-1">
-                  <Link
-                    to="/app/guests/$guestId"
-                    params={{ guestId: r.guest_id }}
-                    className="font-medium text-primary truncate hover:underline block"
-                  >
-                    {r.guests?.full_name ?? "—"}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {r.property ?? "—"}
-                    {r.check_out ? ` · until ${format(parseISO(r.check_out), "MMM d")}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="flex gap-1">
-                    {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+            {(reservations ?? []).map((r) => {
+              const stay = r.check_in && r.check_out
+                ? `${format(parseISO(r.check_in), "MMM d")} – ${format(parseISO(r.check_out), "MMM d")}`
+                : r.check_in
+                ? `Arrives ${format(parseISO(r.check_in), "MMM d")}`
+                : r.check_out
+                ? `Until ${format(parseISO(r.check_out), "MMM d")}`
+                : "Dates pending";
+              return (
+                <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to="/app/guests/$guestId"
+                        params={{ guestId: r.guest_id }}
+                        className="font-medium text-primary truncate hover:underline"
+                      >
+                        {r.guests?.full_name ?? "—"}
+                      </Link>
+                      <ResBadge status={r.status} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {r.property ?? "—"} · {stay}
+                    </p>
                   </div>
-                  {/* Itinerary button */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
-                    onClick={() => setItinRes(r)}
-                  >
-                    <FileText className="h-3 w-3" /> Itinerary
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
-                    onClick={() => { if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
-                    disabled={setResStatus.isPending}
-                  >
-                    <LogOut className="h-3 w-3" /> Check Out
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex gap-1">
+                      {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
+                      onClick={() => setItinRes(r)}
+                    >
+                      <FileText className="h-3 w-3" /> Itinerary
+                    </Button>
+                    {r.status === "Pre-Arrival" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 h-7 px-2 text-[11px] text-primary hover:border-primary/60"
+                        onClick={() => setResStatus.mutate({ id: r.id, status: "In House", reservation: r })}
+                        disabled={setResStatus.isPending}
+                      >
+                        <LogIn className="h-3 w-3" /> Check In
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+                        onClick={() => { if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
+                        disabled={setResStatus.isPending}
+                      >
+                        <LogOut className="h-3 w-3" /> Check Out
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
