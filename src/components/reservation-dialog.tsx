@@ -48,7 +48,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
   const adultsRef = useRef<HTMLInputElement>(null);
   const kidsRef = useRef<HTMLInputElement>(null);
 
-  function openDatePicker(ref: React.RefObject<HTMLInputElement>) {
+  function openDatePicker(ref: React.RefObject<HTMLInputElement | null>) {
     setTimeout(() => {
       try { ref.current?.showPicker(); } catch { ref.current?.focus(); }
     }, 80);
