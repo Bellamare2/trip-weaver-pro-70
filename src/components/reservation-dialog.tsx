@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +41,18 @@ interface Props {
 export function ReservationDialog({ open, onOpenChange, guestId, guestName, initial, onSaved }: Props) {
   const qc = useQueryClient();
   const isEdit = !!initial?.id;
+
+  // Refs for auto-advance focus
+  const checkInRef = useRef<HTMLInputElement>(null);
+  const checkOutRef = useRef<HTMLInputElement>(null);
+  const adultsRef = useRef<HTMLInputElement>(null);
+  const kidsRef = useRef<HTMLInputElement>(null);
+
+  function openDatePicker(ref: React.RefObject<HTMLInputElement>) {
+    setTimeout(() => {
+      try { ref.current?.showPicker(); } catch { ref.current?.focus(); }
+    }, 80);
+  }
 
   const [form, setForm] = useState({
     property: initial?.property ?? "",
@@ -115,12 +127,16 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Property — mandatory */}
+          {/* Property — mandatory, auto-opens on new reservation */}
           <div className="space-y-1.5">
             <Label>Property / Villa <span className="text-destructive">*</span></Label>
             <PropertySelector
               value={form.property}
-              onChange={(v) => setForm((f) => ({ ...f, property: v }))}
+              autoOpen={!isEdit}
+              onChange={(v) => {
+                setForm((f) => ({ ...f, property: v }));
+                if (v) openDatePicker(checkInRef);
+              }}
             />
             {!form.property && save.isError && (
               <p className="text-xs text-destructive">Property is required</p>
@@ -130,12 +146,28 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Check-in <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input type="date" value={form.check_in} onChange={(e) => setForm((f) => ({ ...f, check_in: e.target.value }))} />
+              <Label>Check-in</Label>
+              <Input
+                ref={checkInRef}
+                type="date"
+                value={form.check_in}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, check_in: e.target.value }));
+                  if (e.target.value) openDatePicker(checkOutRef);
+                }}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Check-out <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input type="date" value={form.check_out} onChange={(e) => setForm((f) => ({ ...f, check_out: e.target.value }))} />
+              <Label>Check-out</Label>
+              <Input
+                ref={checkOutRef}
+                type="date"
+                value={form.check_out}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, check_out: e.target.value }));
+                  if (e.target.value) setTimeout(() => adultsRef.current?.focus(), 80);
+                }}
+              />
             </div>
           </div>
 
@@ -143,11 +175,22 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Adults</Label>
-              <Input type="number" min={0} placeholder="0" value={form.adults} onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))} />
+              <Input
+                ref={adultsRef}
+                type="number" min={0} placeholder="0"
+                value={form.adults}
+                onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))}
+                onBlur={() => { if (form.adults) setTimeout(() => kidsRef.current?.focus(), 80); }}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Kids</Label>
-              <Input type="number" min={0} placeholder="0" value={form.kids} onChange={(e) => setForm((f) => ({ ...f, kids: e.target.value }))} />
+              <Input
+                ref={kidsRef}
+                type="number" min={0} placeholder="0"
+                value={form.kids}
+                onChange={(e) => setForm((f) => ({ ...f, kids: e.target.value }))}
+              />
             </div>
           </div>
 

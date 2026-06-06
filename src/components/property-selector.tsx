@@ -5,7 +5,7 @@
  * Usage:
  *   <PropertySelector value={property} onChange={setProperty} />
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,11 +23,21 @@ interface Props {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Auto-open the dropdown when mounted (e.g. first field in a form) */
+  autoOpen?: boolean;
 }
 
-export function PropertySelector({ value, onChange, placeholder = "Select property…" }: Props) {
+export function PropertySelector({ value, onChange, placeholder = "Select property…", autoOpen }: Props) {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [selectOpen, setSelectOpen] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) {
+      const t = setTimeout(() => setSelectOpen(true), 120);
+      return () => clearTimeout(t);
+    }
+  }, [autoOpen]);
 
   const { data: properties } = useQuery({
     queryKey: ["properties", "lite"],
@@ -47,7 +57,7 @@ export function PropertySelector({ value, onChange, placeholder = "Select proper
 
   return (
     <>
-      <Select value={value || "__none"} onValueChange={handleSelect}>
+      <Select value={value || "__none"} onValueChange={handleSelect} open={selectOpen} onOpenChange={setSelectOpen}>
         <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           <SelectItem value="__none">— None —</SelectItem>
