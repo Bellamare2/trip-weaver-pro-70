@@ -8,7 +8,7 @@ import {
 import {
   Plus, Search, CalendarCheck, Clock, Users, BedDouble,
   ChevronLeft, ChevronRight, Sparkles, ClipboardList, BookOpen,
-  LogIn, LogOut, FileText,
+  LogIn, LogOut, FileText, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
