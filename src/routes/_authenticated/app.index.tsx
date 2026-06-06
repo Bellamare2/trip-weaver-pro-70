@@ -432,133 +432,84 @@ function Dashboard() {
         </div>
       </section>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-2">
-        {/* Upcoming check-ins */}
-        <section>
-          <h2 className="font-display text-xl text-primary">Upcoming check-ins</h2>
-          <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
-            {upcomingCheckins.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">None in the next 7 days.</p>
-            )}
-            {upcomingCheckins.map((r) => {
-              const isToday = r.check_in ? isSameDay(parseISO(r.check_in), today) : false;
-              return (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3">
-                  <Link
-                    to="/app/guests/$guestId"
-                    params={{ guestId: r.guest_id }}
-                    className="min-w-0 flex-1 hover:opacity-80"
-                  >
-                    <p className="font-medium text-primary truncate">{r.guests?.full_name ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {r.property ?? "—"}
-                      {r.check_in ? ` · ${format(parseISO(r.check_in), "MMM d")}` : ""}
-                    </p>
-                  </Link>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {/* Check In — highlighted on arrival day */}
-                    <Button
-                      size="sm"
-                      className={`gap-1 h-7 px-2 text-[11px] ${isToday
-                        ? "bg-gold/20 text-gold hover:bg-gold/30 border border-gold/40"
-                        : "border border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-primary"
-                      }`}
-                      onClick={() => setResStatus.mutate({ id: r.id, status: "In House", reservation: r })}
-                      disabled={setResStatus.isPending}
-                    >
-                      <LogIn className="h-3 w-3" /> {isToday ? "Check In" : "Mark In House"}
-                    </Button>
-                    {/* Delete */}
-                    <Button
-                      size="sm" variant="ghost"
-                      className="h-7 px-1.5 text-muted-foreground hover:text-destructive"
-                      onClick={() => {
-                        if (confirm(`Delete reservation for ${r.guests?.full_name ?? "this guest"}?`)) {
-                          deleteRes.mutate(r.id);
-                        }
-                      }}
-                    >
-                      <LogOut className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Active reservations (In House + Pre-Arrival) */}
-        <section>
-          <h2 className="font-display text-xl text-primary">In-residence · Active reservations</h2>
-          <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
-            {(reservations ?? []).length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">No active reservations.</p>
-            )}
-            {(reservations ?? []).map((r) => {
-              const stay = r.check_in && r.check_out
-                ? `${format(parseISO(r.check_in), "MMM d")} – ${format(parseISO(r.check_out), "MMM d")}`
-                : r.check_in
-                ? `Arrives ${format(parseISO(r.check_in), "MMM d")}`
-                : r.check_out
-                ? `Until ${format(parseISO(r.check_out), "MMM d")}`
-                : "Dates pending";
-              return (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        to="/app/guests/$guestId"
-                        params={{ guestId: r.guest_id }}
-                        className="font-medium text-primary truncate hover:underline"
-                      >
-                        {r.guests?.full_name ?? "—"}
-                      </Link>
-                      <ResBadge status={r.status} />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {r.property ?? "—"} · {stay}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
+      {/* In-residence — all active reservations (Pre-Arrival + In House) */}
+      <section className="mt-10">
+        <h2 className="font-display text-xl text-primary">In-residence</h2>
+        <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
+          {(reservations ?? []).length === 0 && (
+            <p className="p-6 text-center text-sm text-muted-foreground">No active reservations.</p>
+          )}
+          {(reservations ?? []).map((r) => {
+            const stay = r.check_in && r.check_out
+              ? `${format(parseISO(r.check_in), "MMM d")} – ${format(parseISO(r.check_out), "MMM d")}`
+              : r.check_in
+              ? `Arrives ${format(parseISO(r.check_in), "MMM d")}`
+              : r.check_out
+              ? `Until ${format(parseISO(r.check_out), "MMM d")}`
+              : "Dates pending";
+            const hasItinerary = (activities ?? []).some(
+              (a) => a.guest_id === r.guest_id
+                && (!r.check_in || a.date >= r.check_in)
+                && (!r.check_out || a.date <= r.check_out),
+            );
+            return (
+              <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setEditRes(r)}
+                  className="min-w-0 flex-1 text-left hover:opacity-80"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-primary truncate hover:underline">
+                      {r.guests?.full_name ?? "—"}
+                    </span>
+                    <ResBadge status={r.status} />
                     <div className="flex gap-1">
                       {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
                     </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {r.property ?? "—"} · {stay}
+                  </p>
+                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
+                    onClick={(e) => { e.stopPropagation(); setItinRes(r); }}
+                  >
+                    <FileText className="h-3 w-3" />
+                    {hasItinerary ? "Itinerary" : "Add itinerary"}
+                    {hasItinerary && <Star className="h-3 w-3 fill-gold text-gold" />}
+                  </Button>
+                  {r.status === "Pre-Arrival" ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
-                      onClick={() => setItinRes(r)}
+                      className="gap-1 h-7 px-2 text-[11px] text-primary hover:border-primary/60"
+                      onClick={(e) => { e.stopPropagation(); setResStatus.mutate({ id: r.id, status: "In House", reservation: r }); }}
+                      disabled={setResStatus.isPending}
                     >
-                      <FileText className="h-3 w-3" /> Itinerary
+                      <LogIn className="h-3 w-3" /> Check In
                     </Button>
-                    {r.status === "Pre-Arrival" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 h-7 px-2 text-[11px] text-primary hover:border-primary/60"
-                        onClick={() => setResStatus.mutate({ id: r.id, status: "In House", reservation: r })}
-                        disabled={setResStatus.isPending}
-                      >
-                        <LogIn className="h-3 w-3" /> Check In
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
-                        onClick={() => { if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
-                        disabled={setResStatus.isPending}
-                      >
-                        <LogOut className="h-3 w-3" /> Check Out
-                      </Button>
-                    )}
-                  </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
+                      disabled={setResStatus.isPending}
+                    >
+                      <LogOut className="h-3 w-3" /> Check Out
+                    </Button>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <ActivityDialog open={open} onOpenChange={setOpen} defaultDate={todayIso} />
       <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={selectedIso} />
