@@ -631,6 +631,7 @@ export type Database = {
       }
       reservations: {
         Row: {
+          adults: number | null
           check_in: string | null
           check_out: string | null
           created_at: string
@@ -639,12 +640,14 @@ export type Database = {
           id: string
           itinerary_closing: string
           itinerary_intro: string
+          kids: number | null
           notes: string | null
           property: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          adults?: number | null
           check_in?: string | null
           check_out?: string | null
           created_at?: string
@@ -653,12 +656,14 @@ export type Database = {
           id?: string
           itinerary_closing?: string
           itinerary_intro?: string
+          kids?: number | null
           notes?: string | null
           property?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          adults?: number | null
           check_in?: string | null
           check_out?: string | null
           created_at?: string
@@ -667,6 +672,7 @@ export type Database = {
           id?: string
           itinerary_closing?: string
           itinerary_intro?: string
+          kids?: number | null
           notes?: string | null
           property?: string | null
           status?: string
