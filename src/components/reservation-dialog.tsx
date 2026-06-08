@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PropertySelector } from "@/components/property-selector";
+import { FileText } from "lucide-react";
 
 export interface ReservationRow {
   id: string;
@@ -36,9 +37,13 @@ interface Props {
   guestName: string;
   initial?: ReservationRow;
   onSaved?: (res: ReservationRow) => void;
+  /** Called when the user clicks the Itinerary button inside the edit dialog */
+  onOpenItinerary?: () => void;
+  /** Show a star on the Itinerary button if activities are already booked */
+  hasActivities?: boolean;
 }
 
-export function ReservationDialog({ open, onOpenChange, guestId, guestName, initial, onSaved }: Props) {
+export function ReservationDialog({ open, onOpenChange, guestId, guestName, initial, onSaved, onOpenItinerary, hasActivities }: Props) {
   const qc = useQueryClient();
   const isEdit = !!initial?.id;
 
@@ -216,11 +221,26 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
           </details>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create reservation"}
-          </Button>
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* Itinerary shortcut — only visible when editing an existing reservation */}
+          {isEdit && onOpenItinerary ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1.5 border-gold/40 text-primary hover:bg-gold/10 cursor-pointer"
+              onClick={onOpenItinerary}
+            >
+              <FileText className="h-4 w-4" />
+              Itinerary
+              {hasActivities && <span className="text-gold text-sm leading-none">★</span>}
+            </Button>
+          ) : <span />}
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : isEdit ? "Save changes" : "Create reservation"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

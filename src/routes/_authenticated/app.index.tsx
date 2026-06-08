@@ -8,7 +8,7 @@ import {
 import {
   Plus, Search, CalendarCheck, Clock, Users, BedDouble,
   ChevronLeft, ChevronRight, Sparkles, ClipboardList, BookOpen,
-  LogIn, LogOut, FileText, Star,
+  LogIn, LogOut, FileText, Baby,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,7 +70,7 @@ function Dashboard() {
   const [reservationOpen, setReservationOpen] = useState(false);
   const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [itinRes, setItinRes] = useState<DashReservation | null>(null);
-  const [editRes, setEditRes] = useState<DashReservation | null>(null);
+  const [editingRes, setEditingRes] = useState<DashReservation | null>(null);
 
   // Stable reference — new Date() on every render would bust every useMemo below
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -297,6 +297,78 @@ function Dashboard() {
         <StatTile label="Today · confirmed" value={todayConfirmed.length} icon={CalendarCheck} />
       </div>
 
+      {/* In-residence cards — shown right under the stats */}
+      {inHouse.length > 0 && (
+        <section className="mt-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {inHouse.map((r) => {
+              const hasActs = (activities ?? []).some((a) => a.reservation_id === r.id);
+              const ciLabel = r.check_in ? format(parseISO(r.check_in), "EEE, MMM d") : "—";
+              const coLabel = r.check_out ? format(parseISO(r.check_out), "EEE, MMM d") : "—";
+              return (
+                <div
+                  key={r.id}
+                  className="cursor-pointer rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-gold/50 hover:bg-gold/5"
+                  onClick={() => setEditingRes(r)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-display text-base font-medium text-primary truncate">
+                        {r.guests?.full_name ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{r.property ?? "—"}</p>
+                    </div>
+                    {/* Adults / kids */}
+                    <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                      {r.adults != null && r.adults > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          <Users className="h-3 w-3" /> {r.adults}
+                        </span>
+                      )}
+                      {r.kids != null && r.kids > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          <Baby className="h-3 w-3" /> {r.kids}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Date range */}
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    {ciLabel} <span className="text-gold/80">→</span> {coLabel}
+                  </p>
+                  {/* Actions row */}
+                  <div className="mt-2.5 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 gap-1 px-2 text-[10px] border-gold/40 text-primary hover:bg-gold/10 cursor-pointer"
+                      onClick={() => setItinRes(r)}
+                    >
+                      <FileText className="h-3 w-3" />
+                      Itinerary
+                      {hasActs && <span className="text-gold">★</span>}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 gap-1 px-2 text-[10px] text-muted-foreground hover:border-destructive/40 hover:text-destructive cursor-pointer"
+                      disabled={setResStatus.isPending}
+                      onClick={() => {
+                        if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) {
+                          setResStatus.mutate({ id: r.id, status: "Out", reservation: r });
+                        }
+                      }}
+                    >
+                      <LogOut className="h-3 w-3" /> Check Out
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Calendar + day timeline */}
       <section className="mt-8 grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Mini calendar */}
@@ -432,78 +504,52 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* In-residence — all active reservations (Pre-Arrival + In House) */}
+      {/* Upcoming check-ins */}
       <section className="mt-10">
-        <h2 className="font-display text-xl text-primary">In-residence</h2>
+        <h2 className="font-display text-xl text-primary">Upcoming check-ins</h2>
         <div className="mt-3 divide-y divide-border rounded-md border border-border bg-card">
-          {(reservations ?? []).length === 0 && (
-            <p className="p-6 text-center text-sm text-muted-foreground">No active reservations.</p>
+          {upcomingCheckins.length === 0 && (
+            <p className="p-6 text-center text-sm text-muted-foreground">None in the next 7 days.</p>
           )}
-          {(reservations ?? []).map((r) => {
-            const stay = r.check_in && r.check_out
-              ? `${format(parseISO(r.check_in), "MMM d")} – ${format(parseISO(r.check_out), "MMM d")}`
-              : r.check_in
-              ? `Arrives ${format(parseISO(r.check_in), "MMM d")}`
-              : r.check_out
-              ? `Until ${format(parseISO(r.check_out), "MMM d")}`
-              : "Dates pending";
-            const hasItinerary = (activities ?? []).some(
-              (a) => a.guest_id === r.guest_id
-                && (!r.check_in || a.date >= r.check_in)
-                && (!r.check_out || a.date <= r.check_out),
-            );
+          {upcomingCheckins.map((r) => {
+            const isToday = r.check_in ? isSameDay(parseISO(r.check_in), today) : false;
             return (
-              <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setEditRes(r)}
-                  className="min-w-0 flex-1 text-left hover:opacity-80"
+              <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                <Link
+                  to="/app/guests/$guestId"
+                  params={{ guestId: r.guest_id }}
+                  className="min-w-0 flex-1 hover:opacity-80 cursor-pointer"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-primary truncate hover:underline">
-                      {r.guests?.full_name ?? "—"}
-                    </span>
-                    <ResBadge status={r.status} />
-                    <div className="flex gap-1">
-                      {((r.guests?.tags ?? []) as GuestTag[]).map((t) => <GuestTagPill key={t} tag={t} size="sm" />)}
-                    </div>
-                  </div>
+                  <p className="font-medium text-primary truncate">{r.guests?.full_name ?? "—"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {r.property ?? "—"} · {stay}
+                    {r.property ?? "—"}
+                    {r.check_in ? ` · ${format(parseISO(r.check_in), "EEE, MMM d")}` : ""}
+                    {r.check_out ? ` → ${format(parseISO(r.check_out), "EEE, MMM d")}` : ""}
                   </p>
-                </button>
+                </Link>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="gap-1 h-7 px-2 text-[11px] border-gold/40 text-primary hover:bg-gold/10"
-                    onClick={(e) => { e.stopPropagation(); setItinRes(r); }}
+                    className={`gap-1 h-7 px-2 text-[11px] cursor-pointer ${isToday
+                      ? "bg-gold/20 text-gold hover:bg-gold/30 border border-gold/40"
+                      : "border border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-primary"
+                    }`}
+                    onClick={() => setResStatus.mutate({ id: r.id, status: "In House", reservation: r })}
+                    disabled={setResStatus.isPending}
                   >
-                    <FileText className="h-3 w-3" />
-                    {hasItinerary ? "Itinerary" : "Add itinerary"}
-                    {hasItinerary && <Star className="h-3 w-3 fill-gold text-gold" />}
+                    <LogIn className="h-3 w-3" /> {isToday ? "Check In" : "Mark In House"}
                   </Button>
-                  {r.status === "Pre-Arrival" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 h-7 px-2 text-[11px] text-primary hover:border-primary/60"
-                      onClick={(e) => { e.stopPropagation(); setResStatus.mutate({ id: r.id, status: "In House", reservation: r }); }}
-                      disabled={setResStatus.isPending}
-                    >
-                      <LogIn className="h-3 w-3" /> Check In
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 h-7 px-2 text-[11px] text-muted-foreground hover:border-destructive/40 hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); if (confirm(`Check out ${r.guests?.full_name ?? "guest"}?`)) setResStatus.mutate({ id: r.id, status: "Out", reservation: r }); }}
-                      disabled={setResStatus.isPending}
-                    >
-                      <LogOut className="h-3 w-3" /> Check Out
-                    </Button>
-                  )}
+                  <Button
+                    size="sm" variant="ghost"
+                    className="h-7 px-1.5 text-muted-foreground hover:text-destructive cursor-pointer"
+                    onClick={() => {
+                      if (confirm(`Delete reservation for ${r.guests?.full_name ?? "this guest"}?`)) {
+                        deleteRes.mutate(r.id);
+                      }
+                    }}
+                  >
+                    <LogOut className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
             );
@@ -533,7 +579,24 @@ function Dashboard() {
         onCreated={() => qc.invalidateQueries({ queryKey: ["dashboard", "guests"] })}
       />
 
-      {/* Itinerary dialog — opened from In-residence row */}
+      {/* Edit reservation — opened from In-residence card click */}
+      {editingRes && (
+        <ReservationDialog
+          open={!!editingRes}
+          onOpenChange={(v) => { if (!v) setEditingRes(null); }}
+          guestId={editingRes.guest_id}
+          guestName={editingRes.guests?.full_name ?? "—"}
+          initial={editingRes as unknown as ReservationRow}
+          hasActivities={(activities ?? []).some((a) => a.reservation_id === editingRes.id)}
+          onOpenItinerary={() => { setItinRes(editingRes); setEditingRes(null); }}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+            setEditingRes(null);
+          }}
+        />
+      )}
+
+      {/* Itinerary dialog */}
       {itinRes && (
         <ItineraryDialog
           open={!!itinRes}
@@ -544,17 +607,6 @@ function Dashboard() {
         />
       )}
 
-      {/* Edit reservation — opened by clicking a row */}
-      {editRes && (
-        <ReservationDialog
-          open={!!editRes}
-          onOpenChange={(v) => { if (!v) setEditRes(null); }}
-          guestId={editRes.guest_id}
-          guestName={editRes.guests?.full_name ?? "—"}
-          initial={editRes as unknown as ReservationRow}
-          onSaved={() => { setEditRes(null); qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] }); }}
-        />
-      )}
 
 
 
