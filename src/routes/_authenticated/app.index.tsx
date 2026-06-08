@@ -227,6 +227,16 @@ function Dashboard() {
     [activities, selectedIso],
   );
 
+  // Arrivals and departures on the selected day
+  const selectedDayArrivals = useMemo(
+    () => (reservations ?? []).filter((r) => r.check_in === selectedIso),
+    [reservations, selectedIso],
+  );
+  const selectedDayDepartures = useMemo(
+    () => (reservations ?? []).filter((r) => r.check_out === selectedIso),
+    [reservations, selectedIso],
+  );
+
   const search = q.trim().toLowerCase();
   const guestHits = search
     ? (guests ?? []).filter((g) => g.full_name.toLowerCase().includes(search)).slice(0, 5)
@@ -434,55 +444,102 @@ function Dashboard() {
               <h2 className="font-display text-xl text-primary">{format(selectedDay, "EEEE, MMMM d")}</h2>
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedDayActivities.length} item{selectedDayActivities.length === 1 ? "" : "s"}
+              {selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length} item{(selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length) === 1 ? "" : "s"}
             </p>
           </div>
-          <div className="max-h-[520px] overflow-y-auto p-3">
-            {selectedDayActivities.length === 0 ? (
+          <div className="max-h-[520px] overflow-y-auto p-3 space-y-2">
+            {/* Arrivals */}
+            {selectedDayArrivals.map((r) => (
+              <div
+                key={`arr-${r.id}`}
+                className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 cursor-pointer hover:border-emerald-500/60 transition-colors"
+                onClick={() => setEditingRes(r)}
+              >
+                <div className="w-16 shrink-0 text-center">
+                  <LogIn className="mx-auto h-4 w-4 text-emerald-600" />
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-emerald-600 font-medium">Arrival</p>
+                </div>
+                <div className="flex-1 border-l border-emerald-400/40 pl-3 min-w-0">
+                  <p className="font-display text-base leading-tight text-primary truncate">{r.guests?.full_name ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{r.property ?? "—"}</p>
+                  {(r.adults != null && r.adults > 0) || (r.kids != null && r.kids > 0) ? (
+                    <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      {r.adults != null && r.adults > 0 && <span className="flex items-center gap-0.5"><Users className="h-3 w-3" />{r.adults}</span>}
+                      {r.kids != null && r.kids > 0 && <span className="flex items-center gap-0.5"><Baby className="h-3 w-3" />{r.kids}</span>}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+
+            {/* Departures */}
+            {selectedDayDepartures.map((r) => (
+              <div
+                key={`dep-${r.id}`}
+                className="flex items-center gap-3 rounded-lg border border-orange-400/30 bg-orange-50/50 dark:bg-orange-950/20 p-3 cursor-pointer hover:border-orange-400/60 transition-colors"
+                onClick={() => setEditingRes(r)}
+              >
+                <div className="w-16 shrink-0 text-center">
+                  <LogOut className="mx-auto h-4 w-4 text-orange-500" />
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-orange-500 font-medium">Departure</p>
+                </div>
+                <div className="flex-1 border-l border-orange-400/40 pl-3 min-w-0">
+                  <p className="font-display text-base leading-tight text-primary truncate">{r.guests?.full_name ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{r.property ?? "—"}</p>
+                  {(r.adults != null && r.adults > 0) || (r.kids != null && r.kids > 0) ? (
+                    <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      {r.adults != null && r.adults > 0 && <span className="flex items-center gap-0.5"><Users className="h-3 w-3" />{r.adults}</span>}
+                      {r.kids != null && r.kids > 0 && <span className="flex items-center gap-0.5"><Baby className="h-3 w-3" />{r.kids}</span>}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+
+            {/* Activities */}
+            {selectedDayActivities.length === 0 && selectedDayArrivals.length === 0 && selectedDayDepartures.length === 0 ? (
               <div className="rounded border border-dashed border-border bg-muted/20 py-12 text-center">
                 <Clock className="mx-auto h-6 w-6 text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">No activities planned</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {selectedDayActivities.map((a) => {
-                  const t = a.start_time
-                    ? (() => { const [h,m] = a.start_time!.split(":"); const d = new Date(); d.setHours(+h, +m); return format(d, "h:mm a"); })()
-                    : "All day";
-                  return (
-                    <button
-                      key={a.id}
-                      onClick={() => setEditing(a as unknown as ActivityDraft)}
-                      className="block w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-gold/60"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-16 shrink-0">
-                          <p className="font-display text-base leading-tight text-primary">{t}</p>
-                          {a.duration_minutes ? <p className="text-[10px] text-muted-foreground">{a.duration_minutes}m</p> : null}
-                        </div>
-                        <div className="flex-1 border-l border-gold/30 pl-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className={`text-[10px] uppercase tracking-widest ${categoryAccent[a.category] ?? "text-muted-foreground"}`}>
-                                {a.service_type ?? a.category}
-                              </p>
-                              <p className="font-display text-base leading-tight text-primary">{a.name}</p>
-                              {a.guests && (
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                  {a.guests.full_name}{a.guests.property ? ` · ${a.guests.property}` : ""}
-                                </p>
-                              )}
-                              {a.vendor && <p className="mt-0.5 text-xs text-foreground/70">{a.vendor}</p>}
-                            </div>
-                            <StatusBadge status={a.status} activityId={a.id} size="sm" />
-                          </div>
-                          {a.location && <p className="mt-1 text-xs text-muted-foreground">{a.location}</p>}
-                        </div>
+              selectedDayActivities.map((a) => {
+                const t = a.start_time
+                  ? (() => { const [h,m] = a.start_time!.split(":"); const d = new Date(); d.setHours(+h, +m); return format(d, "h:mm a"); })()
+                  : "All day";
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => setEditing(a as unknown as ActivityDraft)}
+                    className="block w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-gold/60"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-16 shrink-0">
+                        <p className="font-display text-base leading-tight text-primary">{t}</p>
+                        {a.duration_minutes ? <p className="text-[10px] text-muted-foreground">{a.duration_minutes}m</p> : null}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
+                      <div className="flex-1 border-l border-gold/30 pl-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className={`text-[10px] uppercase tracking-widest ${categoryAccent[a.category] ?? "text-muted-foreground"}`}>
+                              {a.service_type ?? a.category}
+                            </p>
+                            <p className="font-display text-base leading-tight text-primary">{a.name}</p>
+                            {a.guests && (
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {a.guests.full_name}{a.guests.property ? ` · ${a.guests.property}` : ""}
+                              </p>
+                            )}
+                            {a.vendor && <p className="mt-0.5 text-xs text-foreground/70">{a.vendor}</p>}
+                          </div>
+                          <StatusBadge status={a.status} activityId={a.id} size="sm" />
+                        </div>
+                        {a.location && <p className="mt-1 text-xs text-muted-foreground">{a.location}</p>}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
