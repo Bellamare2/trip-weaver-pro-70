@@ -157,12 +157,11 @@ function Dashboard() {
 
   // Auto-advance stale dates once per load:
   // • Pre-Arrival with check_in in the past → push check_in to tomorrow
-  // • In House with check_out in the past → extend check_out by 1 day
+  // • In House with check_out in the past → move check_out to today
   const autoAdvanced = useState(false);
   if (!autoAdvanced[0] && reservations && reservations.length > 0) {
     autoAdvanced[1](true);
     const todayStr = format(today, "yyyy-MM-dd");
-    const tomorrowStr = format(addDays(today, 1), "yyyy-MM-dd");
     reservations.forEach((r) => {
       if (r.status === "Pre-Arrival" && r.check_in && r.check_in < todayStr) {
         supabase.from("reservations").update({ check_in: todayStr }).eq("id", r.id).then(() => {
@@ -170,7 +169,7 @@ function Dashboard() {
         });
       }
       if (r.status === "In House" && r.check_out && r.check_out < todayStr) {
-        supabase.from("reservations").update({ check_out: tomorrowStr }).eq("id", r.id).then(() => {
+        supabase.from("reservations").update({ check_out: todayStr }).eq("id", r.id).then(() => {
           qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
         });
       }
