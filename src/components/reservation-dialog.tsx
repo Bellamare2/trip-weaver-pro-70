@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PropertySelector } from "@/components/property-selector";
-import { FileText } from "lucide-react";
+import { FileText, History } from "lucide-react";
 
 export interface ReservationRow {
   id: string;
@@ -46,6 +47,7 @@ interface Props {
 export function ReservationDialog({ open, onOpenChange, guestId, guestName, initial, onSaved, onOpenItinerary, hasActivities }: Props) {
   const qc = useQueryClient();
   const isEdit = !!initial?.id;
+  const [showLog, setShowLog] = useState(false);
 
   // Refs for auto-advance focus
   const checkInRef = useRef<HTMLInputElement>(null);
@@ -122,6 +124,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
   });
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
@@ -222,18 +225,31 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          {/* Itinerary shortcut — only visible when editing an existing reservation */}
-          {isEdit && onOpenItinerary ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-1.5 border-gold/40 text-primary hover:bg-gold/10 cursor-pointer"
-              onClick={onOpenItinerary}
-            >
-              <FileText className="h-4 w-4" />
-              Itinerary
-              {hasActivities && <span className="text-gold text-sm leading-none">★</span>}
-            </Button>
+          {/* Left-side actions — only in edit mode */}
+          {isEdit ? (
+            <div className="flex gap-2">
+              {onOpenItinerary && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 border-gold/40 text-primary hover:bg-gold/10 cursor-pointer"
+                  onClick={onOpenItinerary}
+                >
+                  <FileText className="h-4 w-4" />
+                  Itinerary
+                  {hasActivities && <span className="text-gold text-sm leading-none">★</span>}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-1.5 cursor-pointer"
+                onClick={() => setShowLog(true)}
+              >
+                <History className="h-4 w-4" />
+                Log
+              </Button>
+            </div>
           ) : <span />}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -242,6 +258,155 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
             </Button>
           </div>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Reservation change log */}
+    {isEdit && initial?.id && (
+      <ReservationLogDialog
+        open={showLog}
+        onOpenChange={setShowLog}
+        reservationId={initial.id}
+        guestName={guestName}
+      />
+    )}
+    </>
+  );
+}
+
+// ── Reservation Log Dialog ────────────────────────────────────────────────────
+interface LogEntry {
+  id: string;
+  action: string;
+  changed_by_name: string | null;
+  changes: Record<string, unknown>;
+  created_at: string;
+}
+
+// Human-readable field labels
+const FIELD_LABELS: Record<string, string> = {
+  property: "Property",
+  check_in: "Check-in",
+  check_out: "Check-out",
+  adults: "Adults",
+  kids: "Kids",
+  notes: "Notes",
+  status: "Status",
+  itinerary_intro: "Itinerary intro",
+  itinerary_closing: "Itinerary closing",
+};
+
+function formatFieldValue(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if ((field === "check_in" || field === "check_out") && typeof value === "string") {
+    try { return format(parseISO(value), "EEE, MMM d, yyyy"); } catch { return String(value); }
+  }
+  return String(value);
+}
+
+function ReservationLogDialog({
+  open, onOpenChange, reservationId, guestName,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  reservationId: string;
+  guestName: string;
+}) {
+  const { data: entries, isLoading } = useQuery({
+    queryKey: ["reservation-log", reservationId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id, action, changed_by_name, changes, created_at")
+        .eq("table_name", "reservations")
+        .eq("record_id", reservationId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as LogEntry[];
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">Reservation log</DialogTitle>
+          <p className="text-sm text-muted-foreground">{guestName}</p>
+        </DialogHeader>
+
+        {isLoading && (
+          <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+        )}
+
+        {!isLoading && (!entries || entries.length === 0) && (
+          <p className="py-6 text-center text-sm text-muted-foreground">No log entries found.</p>
+        )}
+
+        {entries && entries.length > 0 && (
+          <div className="space-y-3">
+            {entries.map((e) => {
+              const who = e.changed_by_name ?? "Unknown user";
+              const when = format(parseISO(e.created_at), "EEE, MMM d yyyy · h:mm a");
+
+              if (e.action === "INSERT") {
+                // Extract key fields from the 'after' object
+                const after = (e.changes as { after?: Record<string, unknown> })?.after ?? {};
+                const highlights = ["property", "check_in", "check_out", "adults", "kids", "status"]
+                  .filter((f) => after[f] != null && after[f] !== "")
+                  .map((f) => `${FIELD_LABELS[f] ?? f}: ${formatFieldValue(f, after[f])}`);
+                return (
+                  <div key={e.id} className="rounded-md border border-border bg-card px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary font-medium">Created</span>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{when}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">by <span className="font-medium text-primary">{who}</span></p>
+                    {highlights.length > 0 && (
+                      <ul className="mt-2 space-y-0.5">
+                        {highlights.map((h) => (
+                          <li key={h} className="text-xs text-foreground/80">{h}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              }
+
+              if (e.action === "UPDATE") {
+                const diffs = e.changes as Record<string, { from: unknown; to: unknown }>;
+                const changedFields = Object.keys(diffs).filter((f) => FIELD_LABELS[f]);
+                if (changedFields.length === 0) return null;
+                return (
+                  <div key={e.id} className="rounded-md border border-border bg-card px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold font-medium">Updated</span>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{when}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">by <span className="font-medium text-primary">{who}</span></p>
+                    <ul className="mt-2 space-y-1">
+                      {changedFields.map((f) => (
+                        <li key={f} className="text-xs">
+                          <span className="font-medium text-foreground/70">{FIELD_LABELS[f]}</span>
+                          <span className="text-muted-foreground"> · </span>
+                          <span className="line-through text-muted-foreground/60">{formatFieldValue(f, diffs[f].from)}</span>
+                          <span className="text-muted-foreground"> → </span>
+                          <span className="text-primary font-medium">{formatFieldValue(f, diffs[f].to)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              }
+
+              return null;
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
