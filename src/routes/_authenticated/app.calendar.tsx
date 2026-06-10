@@ -224,6 +224,9 @@ function CalendarPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         <Plus className="mr-1 inline h-3 w-3" />
         Click any day to view & edit the timeline. Red dot indicates planned activities.
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-success" /> arrival</span>
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-destructive" /> departure</span>
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-gold" /> both</span>
       </p>
 
       <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={format(cursor, "yyyy-MM-dd")} />
