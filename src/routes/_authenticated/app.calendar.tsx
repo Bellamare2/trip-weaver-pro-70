@@ -86,6 +86,23 @@ function CalendarPage() {
     },
   });
 
+  const { data: reservations } = useQuery({
+    queryKey: ["reservations", "cal", format(range.start, "yyyy-MM-dd"), format(range.end, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const start = format(range.start, "yyyy-MM-dd");
+      const end = format(range.end, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("id, check_in, check_out")
+        .or(`and(check_in.gte.${start},check_in.lte.${end}),and(check_out.gte.${start},check_out.lte.${end})`);
+      if (error) throw error;
+      return data as { id: string; check_in: string; check_out: string }[];
+    },
+  });
+
+  const arrivalSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_in)), [reservations]);
+  const departureSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_out)), [reservations]);
+
   const filtered = (activities ?? []).filter((a) => {
     if (fGuest !== "all" && a.guest_id !== fGuest) return false;
     if (fProperty !== "all" && a.guests?.property !== fProperty) return false;
