@@ -86,6 +86,23 @@ function CalendarPage() {
     },
   });
 
+  const { data: reservations } = useQuery({
+    queryKey: ["reservations", "cal", format(range.start, "yyyy-MM-dd"), format(range.end, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const start = format(range.start, "yyyy-MM-dd");
+      const end = format(range.end, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("id, check_in, check_out")
+        .or(`and(check_in.gte.${start},check_in.lte.${end}),and(check_out.gte.${start},check_out.lte.${end})`);
+      if (error) throw error;
+      return data as { id: string; check_in: string; check_out: string }[];
+    },
+  });
+
+  const arrivalSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_in)), [reservations]);
+  const departureSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_out)), [reservations]);
+
   const filtered = (activities ?? []).filter((a) => {
     if (fGuest !== "all" && a.guest_id !== fGuest) return false;
     if (fProperty !== "all" && a.guests?.property !== fProperty) return false;
@@ -159,9 +176,25 @@ function CalendarPage() {
                 className={`group min-h-[110px] border-b border-r border-border p-1.5 text-left last:border-r-0 hover:bg-accent/40 ${inMonth ? "bg-card" : "bg-muted/30"}`}
               >
                 <div className={`mb-1 flex flex-col items-center gap-0.5 ${inMonth ? "text-primary" : "text-muted-foreground"}`}>
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""}`}>
-                    {format(d, "d")}
-                  </span>
+                  {(() => {
+                    const isArrival = arrivalSet.has(iso);
+                    const isDeparture = departureSet.has(iso);
+                    const ring = isArrival && isDeparture
+                      ? "ring-2 ring-gold"
+                      : isArrival
+                        ? "ring-2 ring-success"
+                        : isDeparture
+                          ? "ring-2 ring-destructive"
+                          : "";
+                    return (
+                      <span
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""} ${ring}`}
+                        title={[isArrival && "Arrival", isDeparture && "Departure"].filter(Boolean).join(" · ") || undefined}
+                      >
+                        {format(d, "d")}
+                      </span>
+                    );
+                  })()}
                   {/* Red dot only if events exist */}
                   {dayEvents.length > 0 && (
                     <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-label={`${dayEvents.length} events`} />
@@ -191,6 +224,9 @@ function CalendarPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         <Plus className="mr-1 inline h-3 w-3" />
         Click any day to view & edit the timeline. Red dot indicates planned activities.
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-success" /> arrival</span>
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-destructive" /> departure</span>
+        <span className="ml-2 inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-gold" /> both</span>
       </p>
 
       <ActivityDialog open={guestRequestOpen} onOpenChange={setGuestRequestOpen} defaultDate={format(cursor, "yyyy-MM-dd")} />
