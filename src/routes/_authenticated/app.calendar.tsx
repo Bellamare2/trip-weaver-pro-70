@@ -176,9 +176,25 @@ function CalendarPage() {
                 className={`group min-h-[110px] border-b border-r border-border p-1.5 text-left last:border-r-0 hover:bg-accent/40 ${inMonth ? "bg-card" : "bg-muted/30"}`}
               >
                 <div className={`mb-1 flex flex-col items-center gap-0.5 ${inMonth ? "text-primary" : "text-muted-foreground"}`}>
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""}`}>
-                    {format(d, "d")}
-                  </span>
+                  {(() => {
+                    const isArrival = arrivalSet.has(iso);
+                    const isDeparture = departureSet.has(iso);
+                    const ring = isArrival && isDeparture
+                      ? "ring-2 ring-gold"
+                      : isArrival
+                        ? "ring-2 ring-success"
+                        : isDeparture
+                          ? "ring-2 ring-destructive"
+                          : "";
+                    return (
+                      <span
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday ? "bg-gold text-gold-foreground font-semibold" : ""} ${ring}`}
+                        title={[isArrival && "Arrival", isDeparture && "Departure"].filter(Boolean).join(" · ") || undefined}
+                      >
+                        {format(d, "d")}
+                      </span>
+                    );
+                  })()}
                   {/* Red dot only if events exist */}
                   {dayEvents.length > 0 && (
                     <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-label={`${dayEvents.length} events`} />
