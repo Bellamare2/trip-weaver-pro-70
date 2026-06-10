@@ -311,7 +311,7 @@ function Dashboard() {
         <section className="mt-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {inHouse.map((r) => {
-              const hasActs = (activities ?? []).some((a) => a.reservation_id === r.id);
+              const hasActs = (activities ?? []).some((a) => a.guest_id === r.guest_id && r.check_in && r.check_out && a.date >= r.check_in && a.date <= r.check_out);
               const ciLabel = r.check_in ? format(parseISO(r.check_in), "EEE, MMM d") : "—";
               const coLabel = r.check_out ? format(parseISO(r.check_out), "EEE, MMM d") : "—";
               return (
