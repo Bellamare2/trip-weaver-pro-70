@@ -643,7 +643,7 @@ function Dashboard() {
           guestId={editingRes.guest_id}
           guestName={editingRes.guests?.full_name ?? "—"}
           initial={editingRes as unknown as ReservationRow}
-          hasActivities={(activities ?? []).some((a) => a.reservation_id === editingRes.id)}
+          hasActivities={(activities ?? []).some((a) => a.guest_id === editingRes.guest_id && editingRes.check_in && editingRes.check_out && a.date >= editingRes.check_in && a.date <= editingRes.check_out)}
           onOpenItinerary={() => { setItinRes(editingRes); setEditingRes(null); }}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
