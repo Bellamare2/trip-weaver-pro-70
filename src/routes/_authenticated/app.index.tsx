@@ -409,6 +409,17 @@ function Dashboard() {
               const isToday = isSameDay(d, today);
               const hasActivity = eventDays.has(iso);
               const hasInHouse = inHouseDays.has(iso);
+              const isArrival = arrivalSet.has(iso);
+              const isDeparture = departureSet.has(iso);
+              const ring = isArrival && isDeparture && !isSel
+                ? "ring-2 ring-gold ring-offset-1"
+                : isArrival && !isSel
+                  ? "ring-2 ring-success ring-offset-1"
+                  : isDeparture && !isSel
+                    ? "ring-2 ring-destructive ring-offset-1"
+                    : hasInHouse && !isSel
+                      ? "ring-2 ring-blue-400 ring-offset-1"
+                      : "";
               return (
                 <button
                   key={iso}
@@ -419,10 +430,10 @@ function Dashboard() {
                     inMonth ? "text-primary hover:bg-accent" : "text-muted-foreground/50 hover:bg-accent/40"
                   }`}
                 >
-                  {/* Blue ring around day number when someone is in-house */}
-                  <span className={`flex h-5 w-5 items-center justify-center leading-none rounded-full ${
-                    hasInHouse && !isSel ? "ring-2 ring-blue-400 ring-offset-1" : ""
-                  }`}>
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center leading-none rounded-full ${ring}`}
+                    title={[isArrival && "Arrival", isDeparture && "Departure"].filter(Boolean).join(" · ") || undefined}
+                  >
                     {format(d, "d")}
                   </span>
                   <span className={`mt-0.5 h-1 w-1 rounded-full ${hasActivity ? "bg-destructive" : "bg-transparent"}`} />
