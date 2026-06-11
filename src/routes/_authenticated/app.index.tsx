@@ -219,7 +219,14 @@ function Dashboard() {
         }
       });
     return s;
-  }, [reservations]);
+  const arrivalSet = useMemo(
+    () => new Set((reservations ?? []).filter((r) => r.check_in).map((r) => r.check_in!)),
+    [reservations],
+  );
+  const departureSet = useMemo(
+    () => new Set((reservations ?? []).filter((r) => r.check_out).map((r) => r.check_out!)),
+    [reservations],
+  );
   const selectedDayActivities = useMemo(
     () => (activities ?? [])
       .filter((a) => a.date === selectedIso)
