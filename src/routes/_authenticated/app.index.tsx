@@ -196,8 +196,8 @@ function Dashboard() {
 
   // Calendar day-with-events set for visible month
   const monthDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
-    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 0 });
+    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 });
     return eachDayOfInterval({ start, end });
   }, [cursor]);
   const eventDays = useMemo(() => {
@@ -242,6 +242,15 @@ function Dashboard() {
   );
   const selectedDayDepartures = useMemo(
     () => (reservations ?? []).filter((r) => r.check_out === selectedIso),
+    [reservations, selectedIso],
+  );
+
+  // Reservations that are in-house (ongoing stay) on the selected day,
+  // excluding the exact arrival/departure days (those are shown separately)
+  const selectedDayInHouse = useMemo(
+    () => (reservations ?? []).filter(
+      (r) => r.check_in && r.check_out && r.check_in < selectedIso && r.check_out > selectedIso,
+    ),
     [reservations, selectedIso],
   );
 
@@ -399,7 +408,7 @@ function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-            {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
+            {["M","T","W","T","F","S","S"].map((d, i) => <div key={i}>{d}</div>)}
           </div>
           <div className="mt-1 grid grid-cols-7 gap-y-1">
             {monthDays.map((d) => {
@@ -463,7 +472,7 @@ function Dashboard() {
               <h2 className="font-display text-xl text-primary">{format(selectedDay, "EEEE, MMMM d")}</h2>
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length} item{(selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length) === 1 ? "" : "s"}
+              {selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length + selectedDayInHouse.length} item{(selectedDayActivities.length + selectedDayArrivals.length + selectedDayDepartures.length + selectedDayInHouse.length) === 1 ? "" : "s"}
             </p>
           </div>
           <div className="max-h-[520px] overflow-y-auto p-3 space-y-2">
@@ -515,8 +524,32 @@ function Dashboard() {
               </div>
             ))}
 
+            {/* In House */}
+            {selectedDayInHouse.map((r) => (
+              <div
+                key={`inhouse-${r.id}`}
+                className="flex items-center gap-3 rounded-lg border border-blue-400/30 bg-blue-50/50 dark:bg-blue-950/20 p-3 cursor-pointer hover:border-blue-400/60 transition-colors"
+                onClick={() => setEditingRes(r)}
+              >
+                <div className="w-16 shrink-0 text-center">
+                  <BedDouble className="mx-auto h-4 w-4 text-blue-500" />
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-blue-500 font-medium">In House</p>
+                </div>
+                <div className="flex-1 border-l border-blue-400/40 pl-3 min-w-0">
+                  <p className="font-display text-base leading-tight text-primary truncate">{r.guests?.full_name ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{r.property ?? "—"}</p>
+                  {(r.adults != null && r.adults > 0) || (r.kids != null && r.kids > 0) ? (
+                    <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      {r.adults != null && r.adults > 0 && <span className="flex items-center gap-0.5"><Users className="h-3 w-3" />{r.adults}</span>}
+                      {r.kids != null && r.kids > 0 && <span className="flex items-center gap-0.5"><Baby className="h-3 w-3" />{r.kids}</span>}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+
             {/* Activities */}
-            {selectedDayActivities.length === 0 && selectedDayArrivals.length === 0 && selectedDayDepartures.length === 0 ? (
+            {selectedDayActivities.length === 0 && selectedDayArrivals.length === 0 && selectedDayDepartures.length === 0 && selectedDayInHouse.length === 0 ? (
               <div className="rounded border border-dashed border-border bg-muted/20 py-12 text-center">
                 <Clock className="mx-auto h-6 w-6 text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">No activities planned</p>
