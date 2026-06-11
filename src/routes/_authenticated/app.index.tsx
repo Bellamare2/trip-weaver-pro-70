@@ -219,6 +219,7 @@ function Dashboard() {
         }
       });
     return s;
+  }, [reservations]);
   const arrivalSet = useMemo(
     () => new Set((reservations ?? []).filter((r) => r.check_in).map((r) => r.check_in!)),
     [reservations],
