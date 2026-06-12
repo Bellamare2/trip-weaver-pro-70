@@ -23,32 +23,33 @@ function Landing() {
         </Link>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-20">
-        <div className="max-w-3xl">
-          <img src={logo} alt="" className="mb-8 h-24 w-24 rounded-lg object-cover shadow-elegant" />
-          <span className="inline-block text-xs uppercase tracking-[0.25em] text-gold">
+      <main className="mx-auto max-w-6xl px-6 py-12">
+        <div className="flex flex-col items-center text-center">
+          <img src={logo} alt="" className="mb-6 h-40 w-40 rounded-xl object-cover shadow-elegant" />
+          <h1 className="font-display text-5xl leading-[1.05] text-primary md:text-7xl">
+            Trip Inn
+          </h1>
+          <p className="mt-2 font-display text-2xl text-muted-foreground md:text-3xl">
+            by <span className="text-gold italic">Bellamare</span>
+          </p>
+          <span className="mt-6 inline-block text-xs uppercase tracking-[0.25em] text-gold">
             Los Cabos · Concierge
           </span>
-          <h1 className="mt-6 font-display text-6xl leading-[1.05] text-primary md:text-7xl">
-            Quiet luxury,
-            <br />
-            <span className="italic text-gold">attentively orchestrated.</span>
-          </h1>
           <p className="mt-8 max-w-xl text-lg text-muted-foreground">
-            Trip Inn by Bellamare is the internal command desk for our property managers —
+            The internal command desk for our property managers —
             guest preferences, itineraries, vendors and confirmations, in one calm place.
           </p>
           <div className="mt-10 flex gap-3">
             <Link
               to="/login"
-              className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-90 transition-opacity"
+              className="rounded-md bg-primary px-8 py-3.5 text-sm font-medium text-primary-foreground shadow-elegant hover:opacity-90 transition-opacity"
             >
               Enter the desk
             </Link>
           </div>
         </div>
 
-        <div className="mt-24 grid gap-8 md:grid-cols-3">
+        <div className="mt-20 grid gap-8 md:grid-cols-3">
           {[
             { t: "Guest profiles", d: "Preferences, allergies, languages, VIP notes and history at a glance." },
             { t: "Itineraries", d: "Activity cards by day with vendors, prices and confirmation numbers." },
