@@ -10,8 +10,10 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Bellamare" className="h-10 w-10 rounded-md object-cover" />
-          <span className="font-display text-xl font-semibold text-primary">Bellamare</span>
+          <img src={logo} alt="Trip Inn by Bellamare" className="h-10 w-10 rounded-md object-cover" />
+          <span className="font-display text-xl font-semibold text-primary">
+            Trip Inn <span className="text-muted-foreground font-normal">by</span> Bellamare
+          </span>
         </div>
         <Link
           to="/login"
@@ -33,7 +35,7 @@ function Landing() {
             <span className="italic text-gold">attentively orchestrated.</span>
           </h1>
           <p className="mt-8 max-w-xl text-lg text-muted-foreground">
-            Bellamare Concierge is the internal command desk for our property managers —
+            Trip Inn by Bellamare is the internal command desk for our property managers —
             guest preferences, itineraries, vendors and confirmations, in one calm place.
           </p>
           <div className="mt-10 flex gap-3">
