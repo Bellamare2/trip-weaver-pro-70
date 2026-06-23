@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PropertySelector } from "@/components/property-selector";
-import { FileText, History } from "lucide-react";
+import { FileText, History, XCircle } from "lucide-react";
 
 export interface ReservationRow {
   id: string;
@@ -48,6 +48,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
   const qc = useQueryClient();
   const isEdit = !!initial?.id;
   const [showLog, setShowLog] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   // Refs for auto-advance focus
   const checkInRef = useRef<HTMLInputElement>(null);
@@ -74,6 +75,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
 
   useEffect(() => {
     if (open) {
+      setConfirmCancel(false);
       setForm({
         property: initial?.property ?? "",
         check_in: initial?.check_in ?? "",
@@ -86,6 +88,21 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
       });
     }
   }, [open, initial]);
+
+  const cancelReservation = useMutation({
+    mutationFn: async () => {
+      if (!initial?.id) throw new Error("No reservation selected");
+      const { error } = await supabase.from("reservations").delete().eq("id", initial.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Reservation cancelled");
+      qc.invalidateQueries({ queryKey: ["reservations", guestId] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "reservations"] });
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -249,6 +266,40 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
                 <History className="h-4 w-4" />
                 Log
               </Button>
+              {!confirmCancel ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 cursor-pointer border-destructive/40 text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmCancel(true)}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel reservation
+                </Button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-destructive font-medium">Are you sure?</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="cursor-pointer"
+                    disabled={cancelReservation.isPending}
+                    onClick={() => cancelReservation.mutate()}
+                  >
+                    {cancelReservation.isPending ? "Cancelling…" : "Yes, cancel"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="cursor-pointer"
+                    onClick={() => setConfirmCancel(false)}
+                  >
+                    Back
+                  </Button>
+                </div>
+              )}
             </div>
           ) : <span />}
           <div className="flex gap-2 justify-end">
