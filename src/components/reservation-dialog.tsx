@@ -24,7 +24,7 @@ export interface ReservationRow {
   notes: string | null;
   itinerary_intro: string;
   itinerary_closing: string;
-  status?: string;
+  status?: "Pre-Arrival" | "In House" | "Out" | "Cancelled";
   created_at: string;
 }
 
@@ -92,7 +92,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
   const cancelReservation = useMutation({
     mutationFn: async () => {
       if (!initial?.id) throw new Error("No reservation selected");
-      const { error } = await supabase.from("reservations").delete().eq("id", initial.id);
+      const { error } = await supabase.from("reservations").update({ status: "Cancelled" }).eq("id", initial.id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {

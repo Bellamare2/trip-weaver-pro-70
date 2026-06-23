@@ -491,19 +491,33 @@ function ReservationCard({
       : "Dates pending",
   ].join("");
 
+  const isCancelled = reservation.status === "Cancelled";
+
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-elegant">
+    <div
+      className={`rounded-lg border bg-card p-4 shadow-elegant cursor-pointer hover:border-primary/40 transition-colors ${isCancelled ? "border-destructive/30 opacity-70" : "border-border"}`}
+      onClick={onEdit}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Reservation</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Reservation</p>
+            {isCancelled && (
+              <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-destructive/15 text-destructive border border-destructive/30">
+                CXL
+              </span>
+            )}
+          </div>
           <h3 className="mt-1 font-display text-lg text-primary">{reservation.property ?? "No property"}</h3>
           <p className="text-sm text-muted-foreground">{stayLine}</p>
           {reservation.notes && <p className="mt-1 text-xs text-muted-foreground">{reservation.notes}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button size="sm" variant="outline" onClick={onItinerary} className="gap-1.5">
-            <BookOpen className="h-3.5 w-3.5" /> Itinerary
-          </Button>
+        <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {!isCancelled && (
+            <Button size="sm" variant="outline" onClick={onItinerary} className="gap-1.5">
+              <BookOpen className="h-3.5 w-3.5" /> Itinerary
+            </Button>
+          )}
           <button onClick={onEdit} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary">
             <Pencil className="h-3.5 w-3.5" />
           </button>
