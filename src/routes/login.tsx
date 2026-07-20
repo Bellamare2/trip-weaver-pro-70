@@ -8,11 +8,20 @@ import { Label } from "@/components/ui/label";
 import logo from "@/assets/bellamare-logo.jpg";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: LoginPage,
 });
 
+function isSafeRelative(path: string | undefined): path is string {
+  return !!path && path.startsWith("/") && !path.startsWith("//");
+}
+
 function LoginPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const dest = isSafeRelative(next) ? next : "/app";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,9 +31,9 @@ function LoginPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
+      if (data.session) window.location.href = dest;
     });
-  }, [navigate]);
+  }, [dest]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +48,10 @@ function LoginPage() {
         localStorage.removeItem("bellamare-remember-me");
         sessionStorage.setItem("bellamare-session-active", "1");
       }
-      navigate({ to: "/app" });
+      // Use hard nav so OAuth consent (/.lovable/…) can be reached — TanStack
+      // navigate() only handles known typed routes.
+      if (dest.startsWith("/app")) navigate({ to: dest });
+      else window.location.href = dest;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
