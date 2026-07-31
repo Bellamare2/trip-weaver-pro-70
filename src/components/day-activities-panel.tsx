@@ -115,10 +115,6 @@ export function DayActivitiesPanel({
     return { arriving: arr, departing: dep, inHouse: house };
   }, [reservations, date]);
 
-  const reservationIds = useMemo(
-    () => new Set((reservations ?? []).map((r) => r.id)),
-    [reservations],
-  );
 
   const resHasItinerary = (res: DayReservation) => {
     return (activities ?? []).some(
