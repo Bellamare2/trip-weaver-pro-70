@@ -242,9 +242,9 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left-side actions — only in edit mode */}
+          {/* Left-side actions — always available for any existing reservation, regardless of data quality */}
           {isEdit ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {onOpenItinerary && (
                 <Button
                   type="button"
@@ -266,6 +266,7 @@ export function ReservationDialog({ open, onOpenChange, guestId, guestName, init
                 <History className="h-4 w-4" />
                 Log
               </Button>
+              {/* Cancel reservation is intentionally shown for every reservation with an id, even if dates are malformed */}
               {!confirmCancel ? (
                 <Button
                   type="button"
