@@ -91,17 +91,36 @@ function CalendarPage() {
     queryFn: async () => {
       const start = format(range.start, "yyyy-MM-dd");
       const end = format(range.end, "yyyy-MM-dd");
+      // Fetch any reservation that overlaps the visible range (includes spans that cover the whole range)
       const { data, error } = await supabase
         .from("reservations")
-        .select("id, check_in, check_out")
-        .or(`and(check_in.gte.${start},check_in.lte.${end}),and(check_out.gte.${start},check_out.lte.${end})`);
+        .select("id, check_in, check_out, property, status, guests(full_name)")
+        .lte("check_in", end)
+        .gte("check_out", start)
+        .neq("status", "Cancelled");
       if (error) throw error;
-      return data as { id: string; check_in: string; check_out: string }[];
+      return data as { id: string; check_in: string; check_out: string; property: string | null; status: string; guests: { full_name: string } | null }[];
     },
   });
 
   const arrivalSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_in)), [reservations]);
   const departureSet = useMemo(() => new Set((reservations ?? []).map((r) => r.check_out)), [reservations]);
+
+  // For each day, find reservations overlapping it for display in the cell
+  const reservationsByDay = useMemo(() => {
+    const map = new Map<string, typeof reservations>();
+    (reservations ?? []).forEach((r) => {
+      if (!r.check_in || !r.check_out) return;
+      days.forEach((d) => {
+        const iso = format(d, "yyyy-MM-dd");
+        if (r.check_in! <= iso && r.check_out! >= iso) {
+          if (!map.has(iso)) map.set(iso, []);
+          map.get(iso)!.push(r);
+        }
+      });
+    });
+    return map;
+  }, [reservations, days]);
 
   const filtered = (activities ?? []).filter((a) => {
     if (fGuest !== "all" && a.guest_id !== fGuest) return false;
@@ -201,7 +220,31 @@ function CalendarPage() {
                   )}
                 </div>
                 <div className="space-y-1">
-                  {dayEvents.slice(0, 3).map((a) => (
+                  {/* Reservation chips */}
+                  {(reservationsByDay.get(iso) ?? []).slice(0, 2).map((r) => {
+                    const isArr = r.check_in === iso;
+                    const isDep = r.check_out === iso;
+                    const chipColor = isArr
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                      : isDep
+                      ? "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300"
+                      : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300";
+                    const prefix = isArr ? "▶ " : isDep ? "◀ " : "• ";
+                    return (
+                      <div
+                        key={r.id}
+                        className={`block w-full truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${chipColor}`}
+                        title={`${r.guests?.full_name ?? "Guest"} · ${r.property ?? ""}`}
+                      >
+                        {prefix}{r.guests?.full_name ?? r.property ?? "Guest"}
+                      </div>
+                    );
+                  })}
+                  {(reservationsByDay.get(iso) ?? []).length > 2 && (
+                    <p className="px-1.5 text-[10px] text-muted-foreground">+{(reservationsByDay.get(iso) ?? []).length - 2} more</p>
+                  )}
+                  {/* Activity chips */}
+                  {dayEvents.slice(0, 2).map((a) => (
                     <div
                       key={a.id}
                       className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10px]"
@@ -211,8 +254,8 @@ function CalendarPage() {
                       <span className="text-primary">{a.start_time ? a.start_time.slice(0, 5) + " " : ""}{a.name}</span>
                     </div>
                   ))}
-                  {dayEvents.length > 3 && (
-                    <p className="px-1.5 text-[10px] text-muted-foreground">+{dayEvents.length - 3} more</p>
+                  {dayEvents.length > 2 && (
+                    <p className="px-1.5 text-[10px] text-muted-foreground">+{dayEvents.length - 2} more</p>
                   )}
                 </div>
               </button>

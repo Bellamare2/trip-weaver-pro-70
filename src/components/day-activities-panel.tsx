@@ -103,7 +103,7 @@ export function DayActivitiesPanel({
     const house: DayReservation[] = [];
     if (!date) return { arriving: arr, departing: dep, inHouse: house };
     (reservations ?? []).forEach((r) => {
-      if (r.status === "Cancelled" || r.status === "Out") return;
+      if (r.status === "Cancelled") return;
       if (r.check_in === date) {
         arr.push(r);
       } else if (r.check_out === date) {
