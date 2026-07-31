@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { Printer, Mail, Download, Plus, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -137,6 +137,11 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
     else setChecked(new Set(allIds));
   }
 
+  // Escape user-supplied strings before inserting into document.write HTML
+  const esc = useCallback((s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"),
+  []);
+
   function handlePrint() {
     const win = window.open("", "_blank");
     if (!win) return;
@@ -147,23 +152,23 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
       const det = (a.details ?? {}) as Record<string, unknown>;
       const rows = [
         ["Date & Time", fmtDateTime(a.date, a.start_time)],
-        a.vendor ? ["Vendor", a.vendor] : null,
-        a.location ? ["Location", a.location] : null,
-        det.pickup ? ["Pick-up", String(det.pickup)] : null,
-        det.destination ? ["Destination", String(det.destination)] : null,
-        det.car_type ? ["Car type", String(det.car_type)] : null,
-        det.adults ? ["Number of adults", String(det.adults)] : null,
-        det.children ? ["Number of children", String(det.children)] : null,
-        det.flight_number ? ["Flight #", String(det.flight_number)] : null,
-        det.charge_type ? ["Charge type", String(det.charge_type)] : null,
+        a.vendor ? ["Vendor", esc(a.vendor)] : null,
+        a.location ? ["Location", esc(a.location)] : null,
+        det.pickup ? ["Pick-up", esc(String(det.pickup))] : null,
+        det.destination ? ["Destination", esc(String(det.destination))] : null,
+        det.car_type ? ["Car type", esc(String(det.car_type))] : null,
+        det.adults ? ["Number of adults", esc(String(det.adults))] : null,
+        det.children ? ["Number of children", esc(String(det.children))] : null,
+        det.flight_number ? ["Flight #", esc(String(det.flight_number))] : null,
+        det.charge_type ? ["Charge type", esc(String(det.charge_type))] : null,
         a.price_usd != null ? ["Total price", `$${a.price_usd.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD`] : null,
-        a.notes ? ["Special notes", a.notes] : null,
-        a.confirmation_number ? ["Confirmation #", a.confirmation_number] : null,
-        a.confirmed_with ? ["Confirmed with", a.confirmed_with] : null,
+        a.notes ? ["Special notes", esc(a.notes)] : null,
+        a.confirmation_number ? ["Confirmation #", esc(a.confirmation_number)] : null,
+        a.confirmed_with ? ["Confirmed with", esc(a.confirmed_with)] : null,
       ].filter(Boolean) as [string, string][];
 
       return `<div style="border-top:1px solid #e5e5e5;padding:16px 0 4px;">
-        <p style="font-weight:bold;font-size:14px;margin:0 0 10px;">${a.name}</p>
+        <p style="font-weight:bold;font-size:14px;margin:0 0 10px;">${esc(a.name)}</p>
         ${rows.map(([lbl, val]) => `
           <div style="display:flex;gap:16px;margin-bottom:5px;font-size:12px;">
             <span style="min-width:140px;color:#888;text-transform:uppercase;font-size:10px;letter-spacing:1px;padding-top:1px;">${lbl}</span>
@@ -190,11 +195,11 @@ export function ItineraryDialog({ open, onOpenChange, reservation, guestName, gu
           <p style="margin:0;font-size:20px;font-family:Georgia,serif;color:#1a1a2e;">Bellamare</p>
         </div>
       </div>
-      <p style="font-style:italic;font-size:14px;margin:0 0 8px;">Dear ${guestName},</p>
-      <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0 0 20px;">${intro}</p>
+      <p style="font-style:italic;font-size:14px;margin:0 0 8px;">Dear ${esc(guestName)},</p>
+      <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0 0 20px;">${esc(intro)}</p>
       ${activitiesHtml}
       <div style="border-top:1px solid #c9a84c55;margin-top:24px;padding-top:16px;">
-        <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0;">${closing}</p>
+        <p style="font-size:12px;line-height:1.7;white-space:pre-line;color:#444;margin:0;">${esc(closing)}</p>
       </div>
     </div></body></html>`);
     win.document.close();

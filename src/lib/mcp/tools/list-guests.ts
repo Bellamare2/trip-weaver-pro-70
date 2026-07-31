@@ -25,7 +25,12 @@ export default defineTool({
       .select("id, first_name, last_name, email, phone, guest_type, tags, property, notes, created_at")
       .order("created_at", { ascending: false })
       .limit(limit ?? 50);
-    if (search) q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
+    if (search) {
+      // Strip characters that have special meaning in PostgREST filter expressions
+      // to prevent filter-logic injection via the search string.
+      const safe = search.replace(/[%_(),. ]/g, (c) => (c === " " ? "%" : "")).replace(/[^a-zA-Z0-9%áéíóúüñÁÉÍÓÚÜÑ]/g, "");
+      if (safe) q = q.or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%`);
+    }
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     return {
