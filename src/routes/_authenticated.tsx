@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated")({
+  // Session lives in browser storage; the server can't see it, so skip SSR
+  // here to avoid a server-side redirect loop back to /login.
+  ssr: false,
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
