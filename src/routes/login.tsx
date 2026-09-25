@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import logo from "@/assets/bellamare-logo.jpg";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
   component: LoginPage,
