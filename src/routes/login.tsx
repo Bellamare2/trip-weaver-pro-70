@@ -15,7 +15,8 @@ export const Route = createFileRoute("/login")({
 });
 
 function isSafeRelative(path: string | undefined): path is string {
-  return !!path && path.startsWith("/") && !path.startsWith("//");
+  return !!path && path.startsWith("/") && !path.startsWith("//")
+    && path !== "/login" && !path.startsWith("/login?") && path !== "/";
 }
 
 function LoginPage() {
@@ -30,10 +31,20 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = dest;
+    let cancelled = false;
+    // Validate with the auth server, not the local cache: a stale/revoked
+    // session would otherwise bounce login → /app → login forever.
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data.user) {
+        if (error) void supabase.auth.signOut(); // clear the stale session
+        return;
+      }
+      if (dest.startsWith("/app")) navigate({ to: dest });
+      else window.location.href = dest;
     });
-  }, [dest]);
+    return () => { cancelled = true; };
+  }, [dest, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -14,8 +14,12 @@ export const Route = createFileRoute("/_authenticated")({
   // here to avoid a server-side redirect loop back to /login.
   ssr: false,
   beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // getUser() re-validates with the auth server; getSession() alone can
+    // return a cached session whose refresh token was revoked, which made
+    // the app bounce between /login and /app on some devices.
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      await supabase.auth.signOut(); // clear any stale cached session
       throw redirect({ to: "/login" });
     }
     // If the user signed in without "Stay signed in", the session-active flag
